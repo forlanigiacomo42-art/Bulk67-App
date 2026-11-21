@@ -30,6 +30,53 @@
     .kcal-ring-fill { fill: none; stroke-width: 10; stroke-linecap: round; transition: stroke-dashoffset 0.55s cubic-bezier(.4,0,.2,1), stroke 0.3s ease; }
     #barcodeReader { border-radius: 16px; overflow: hidden; background: #020617; }
     #barcodeReader video { border-radius: 16px; object-fit: cover; width: 100% !important; }
+
+    /* Selettore a doppia rotella stile Yazio / iOS */
+    .yazio-wheel-wrap {
+      position: relative;
+      height: 156px;
+      overflow: hidden;
+      mask-image: linear-gradient(to bottom, transparent 0%, black 28%, black 72%, transparent 100%);
+      -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 28%, black 72%, transparent 100%);
+    }
+    .yazio-wheel-col {
+      height: 156px;
+      overflow-y: auto;
+      scroll-snap-type: y mandatory;
+      -webkit-overflow-scrolling: touch;
+      padding-top: 58px;
+      padding-bottom: 58px;
+    }
+    .yazio-wheel-item {
+      height: 40px;
+      scroll-snap-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #64748b;
+      cursor: pointer;
+      transition: color 0.15s ease, transform 0.15s ease;
+    }
+    .yazio-wheel-item.active {
+      color: #f8fafc;
+      font-weight: 800;
+      transform: scale(1.06);
+    }
+    .yazio-wheel-band {
+      position: absolute;
+      left: 8px;
+      right: 8px;
+      top: 58px;
+      height: 40px;
+      border-radius: 12px;
+      background: rgba(16, 185, 129, 0.13);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      pointer-events: none;
+      z-index: 1;
+    }
   </style>
 </head>
 <body class="min-h-screen flex flex-col">
@@ -378,17 +425,21 @@
         <button type="button" onclick="shiftNutritionDate(1)" class="p-1.5 rounded-xl bg-slate-950 text-slate-300 active:scale-90"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
       </div>
 
-      <div class="grid grid-cols-3 gap-1 bg-slate-900 p-1 rounded-2xl border border-slate-800 text-[11px] font-bold">
+      <div class="grid grid-cols-4 gap-1 bg-slate-900 p-1 rounded-2xl border border-slate-800 text-[11px] font-bold">
         <button type="button" id="nutriSubDiaryBtn" onclick="setNutritionSubView('diary')" class="py-2 rounded-xl bg-emerald-600 text-white transition flex items-center justify-center gap-1"><i data-lucide="utensils" class="w-3.5 h-3.5"></i> Diario</button>
         <button type="button" id="nutriSubMicrosBtn" onclick="setNutritionSubView('micros')" class="py-2 rounded-xl text-slate-400 transition flex items-center justify-center gap-1"><i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Vitamine</button>
         <button type="button" id="nutriSubRecipesBtn" onclick="setNutritionSubView('recipes')" class="py-2 rounded-xl text-slate-400 transition flex items-center justify-center gap-1"><i data-lucide="chef-hat" class="w-3.5 h-3.5"></i> Ricette</button>
+        <button type="button" id="nutriSubShopBtn" onclick="setNutritionSubView('shop')" class="py-2 rounded-xl text-slate-400 transition flex items-center justify-center gap-1"><i data-lucide="shopping-cart" class="w-3.5 h-3.5"></i> Spesa</button>
       </div>
 
       <!-- SOTTO-VISTA 5A: DIARIO YAZIO -->
       <div id="nutriDiaryView" class="space-y-4">
         <div class="bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 border border-slate-800 rounded-3xl p-4 space-y-4 shadow-xl">
           <div class="flex items-center justify-between gap-2">
-            <span class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5"><i data-lucide="flame" class="w-3.5 h-3.5 text-emerald-400"></i> Bilancio Giornaliero</span>
+            <div class="flex items-center gap-1.5">
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1"><i data-lucide="flame" class="w-3.5 h-3.5 text-emerald-400"></i> Bilancio</span>
+              <span id="nutriStreakBadge" class="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300">🔥 0g</span>
+            </div>
             <button type="button" onclick="openBodyProfileModal()" class="text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 flex items-center gap-1">
               <span id="heroWeightBadge">61.0 kg</span> · <span id="heroSurplusBadge">+300 kcal</span>
             </button>
@@ -420,7 +471,7 @@
               <span id="yazioTargetTotalVal" class="font-extrabold text-emerald-400">0 kcal</span>
             </div>
             <div id="yazioFormulaBreakdown" class="text-[10px] text-slate-400 leading-relaxed flex flex-wrap items-center gap-x-2 gap-y-0.5"></div>
-          </div>
+        </div>
 
           <div class="grid grid-cols-3 gap-2.5 pt-1">
             <div class="bg-slate-950/70 border border-slate-800/80 rounded-2xl p-2.5 space-y-1.5">
@@ -443,37 +494,101 @@
           <div id="weeklyAvgBanner" class="bg-slate-950/80 border border-slate-800/80 rounded-xl px-3 py-2 flex items-center justify-between text-[11px] text-slate-400">
             <span>Media 7 giorni:</span><span class="font-semibold text-slate-500">Registra i pasti per vederla</span>
           </div>
+
+          <!-- Punteggio Giornaliero + Smart Coach "Cosa mangio adesso?" -->
+          <div class="flex items-center justify-between gap-2 bg-slate-950/90 border border-emerald-500/25 rounded-2xl px-3 py-2">
+            <div class="flex items-center gap-2 min-w-0">
+              <div id="dailyScoreCircle" class="w-8 h-8 rounded-xl bg-emerald-500/15 border border-emerald-500/35 flex items-center justify-center text-xs font-extrabold text-emerald-300 shrink-0">0</div>
+              <div class="min-w-0">
+                <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Punteggio Giornata</div>
+                <div id="dailyScoreHint" class="text-[11px] font-semibold text-slate-200 truncate">Inizia a registrare i pasti</div>
+              </div>
+            </div>
+            <button type="button" onclick="openSmartCoachModal()" class="px-2.5 py-1.5 rounded-xl bg-emerald-600/20 border border-emerald-500/40 text-emerald-300 text-[11px] font-bold flex items-center gap-1 shrink-0 active:scale-95">
+              <i data-lucide="wand-sparkles" class="w-3.5 h-3.5"></i> Cosa mangio?
+            </button>
+          </div>
         </div>
 
+        <!-- Pulsanti Rapidi Diario -->
         <div class="grid grid-cols-3 gap-2">
           <button type="button" onclick="openFoodLoggerModal('Pranzo')" class="py-2.5 px-2 rounded-2xl bg-blue-600 hover:bg-blue-500 active:scale-95 transition text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-lg shadow-blue-600/20"><i data-lucide="plus" class="w-4 h-4"></i> Alimento</button>
           <button type="button" onclick="openBarcodeScannerModal('Spuntini')" class="py-2.5 px-2 rounded-2xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 transition text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-600/20"><i data-lucide="scan-barcode" class="w-4 h-4"></i> Codice</button>
           <button type="button" onclick="openExtraActivityModal()" class="py-2.5 px-2 rounded-2xl bg-slate-900 border border-amber-500/40 hover:bg-slate-800 active:scale-95 transition text-amber-300 font-bold text-xs flex items-center justify-center gap-1.5"><i data-lucide="activity" class="w-4 h-4"></i> + Sport</button>
         </div>
 
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 space-y-2.5">
+        <!-- Dispendio Allenamenti, Università e Studio -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 space-y-3">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2">
               <div class="w-8 h-8 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400"><i data-lucide="zap" class="w-4 h-4"></i></div>
-              <div><h3 class="text-xs font-bold text-white">Dispendio Allenamento di Oggi</h3><p class="text-[10px] text-slate-400">Sincronizzato automaticamente con IronOS</p></div>
+              <div>
+                <h3 class="text-xs font-bold text-white">Dispendio di Oggi (Sport &amp; Studio)</h3>
+                <p class="text-[10px] text-slate-400">Sincronizzato con IronOS + ore università e studio</p>
+              </div>
             </div>
-            <button type="button" onclick="openExtraActivityModal()" class="text-[11px] font-bold text-amber-400 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/25">+ Attività</button>
+            <button type="button" onclick="openExtraActivityModal()" class="text-[11px] font-bold text-amber-400 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/25">+ Sport</button>
           </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div class="bg-slate-950/80 border border-indigo-500/25 rounded-xl p-2.5 space-y-1.5">
+              <div class="flex items-center justify-between">
+                <span class="text-[10px] font-bold text-indigo-300 flex items-center gap-1"><i data-lucide="graduation-cap" class="w-3 h-3"></i> Lezioni / Uni</span>
+                <span id="uniBurnKcalBadge" class="text-[10px] font-extrabold text-indigo-400">+0 kcal</span>
+              </div>
+              <div class="flex items-center justify-between gap-1">
+                <button type="button" onclick="adjustStudyUniHours('uniHours', -0.5)" class="w-7 h-7 rounded-lg bg-slate-900 border border-slate-700 text-slate-300 text-xs font-bold active:scale-95">-</button>
+                <div class="flex items-baseline gap-0.5">
+                  <input type="number" step="0.5" min="0" max="16" id="uniHoursInput" value="0" onchange="setStudyUniHours('uniHours', this.value)" class="w-11 bg-transparent text-center text-sm font-extrabold text-white focus:outline-none" />
+                  <span class="text-[10px] text-slate-400">h</span>
+                </div>
+                <button type="button" onclick="adjustStudyUniHours('uniHours', 0.5)" class="w-7 h-7 rounded-lg bg-indigo-600/25 border border-indigo-500/40 text-indigo-300 text-xs font-bold active:scale-95">+</button>
+              </div>
+            </div>
+
+            <div class="bg-slate-950/80 border border-blue-500/25 rounded-xl p-2.5 space-y-1.5">
+              <div class="flex items-center justify-between">
+                <span class="text-[10px] font-bold text-blue-300 flex items-center gap-1"><i data-lucide="book-open" class="w-3 h-3"></i> Studio</span>
+                <span id="studyBurnKcalBadge" class="text-[10px] font-extrabold text-blue-400">+0 kcal</span>
+              </div>
+              <div class="flex items-center justify-between gap-1">
+                <button type="button" onclick="adjustStudyUniHours('studyHours', -0.5)" class="w-7 h-7 rounded-lg bg-slate-900 border border-slate-700 text-slate-300 text-xs font-bold active:scale-95">-</button>
+                <div class="flex items-baseline gap-0.5">
+                  <input type="number" step="0.5" min="0" max="16" id="studyHoursInput" value="0" onchange="setStudyUniHours('studyHours', this.value)" class="w-11 bg-transparent text-center text-sm font-extrabold text-white focus:outline-none" />
+                  <span class="text-[10px] text-slate-400">h</span>
+                </div>
+                <button type="button" onclick="adjustStudyUniHours('studyHours', 0.5)" class="w-7 h-7 rounded-lg bg-blue-600/25 border border-blue-500/40 text-blue-300 text-xs font-bold active:scale-95">+</button>
+              </div>
+            </div>
+          </div>
+
           <div id="nutriDayActivitiesList" class="space-y-1.5"></div>
         </div>
 
+        <!-- 4 Pasti Stile Yazio -->
         <div id="yazioMealsContainer" class="space-y-3"></div>
 
-        <!-- Idratazione -->
+        <!-- Idratazione con Inserimento Esatto in ml -->
         <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2.5">
               <div class="w-9 h-9 rounded-xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center text-cyan-400"><i data-lucide="droplets" class="w-4 h-4"></i></div>
-              <div><h3 class="text-sm font-bold text-white">Idratazione</h3><p id="waterSubtitle" class="text-[11px] text-slate-400">0 / 2.5 L consigliati</p></div>
+              <div>
+                <h3 class="text-sm font-bold text-white">Idratazione</h3>
+                <p id="waterSubtitle" class="text-[11px] text-slate-400">0 / 2.5 L consigliati</p>
+              </div>
             </div>
             <span id="waterPercentBadge" class="text-xs font-extrabold text-cyan-400 bg-cyan-500/10 border border-cyan-500/25 px-2.5 py-1 rounded-full">0%</span>
           </div>
           <div class="h-2 bg-slate-950 rounded-full overflow-hidden border border-slate-800"><div id="waterProgressBar" class="h-full bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full transition-all duration-300" style="width:0%"></div></div>
+          <div class="flex items-center gap-1.5">
+            <div class="relative flex-1">
+              <input type="number" inputmode="numeric" id="customWaterMlInput" placeholder="Es. 330 o 750" class="w-full bg-slate-950 border border-slate-700 rounded-xl pl-3 pr-9 py-2 text-xs font-bold text-white focus:outline-none focus:border-cyan-500" />
+              <span class="text-[10px] font-bold text-slate-400 absolute right-3 top-2.5">ml</span>
+            </div>
+            <button type="button" onclick="applyCustomWater('add')" class="px-3 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold shrink-0 active:scale-95">+ Aggiungi</button>
+            <button type="button" onclick="applyCustomWater('set')" class="px-2.5 py-2 rounded-xl bg-slate-950 border border-cyan-500/35 text-cyan-300 text-xs font-bold shrink-0 active:scale-95">Imposta</button>
+          </div>
           <div class="grid grid-cols-3 gap-2">
             <button type="button" onclick="addWater(-250)" class="py-2 rounded-xl bg-slate-950 border border-slate-800 text-slate-400 text-xs font-bold active:scale-95">-250 ml</button>
             <button type="button" onclick="addWater(250)" class="py-2 rounded-xl bg-cyan-600/20 border border-cyan-500/35 text-cyan-300 text-xs font-bold active:scale-95">+1 Bicchiere</button>
@@ -502,17 +617,45 @@
         </div>
         <div id="recipesListContainer" class="space-y-2.5"></div>
       </div>
+
+      <!-- SOTTO-VISTA 5D: LISTA DELLA SPESA FUORI SEDE (CON BUDGET €) -->
+      <div id="nutriShopView" class="hidden space-y-3">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
+          <div class="flex items-center justify-between gap-2">
+            <div>
+              <h3 class="text-sm font-bold text-white flex items-center gap-1.5"><i data-lucide="shopping-cart" class="w-4 h-4 text-emerald-400"></i> Spesa Fuori Sede (5 Giorni)</h3>
+              <p id="shopBudgetSub" class="text-[11px] text-slate-400">Budget obiettivo: 40,00 €</p>
+            </div>
+            <button type="button" onclick="resetShopChecks()" class="px-2.5 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-[11px] font-semibold text-slate-300 active:scale-95">Svuota Spunte</button>
+          </div>
+          <div class="space-y-1">
+            <div class="flex items-center justify-between text-xs font-bold">
+              <span class="text-slate-300">Totale stimato lista:</span>
+              <span id="shopTotalCostBadge" class="text-emerald-400">0,00 € / 40,00 €</span>
+            </div>
+            <div class="h-2 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
+              <div id="shopBudgetBar" class="h-full bg-emerald-500 rounded-full transition-all duration-300" style="width:0%"></div>
+            </div>
+          </div>
+          <div class="flex items-center gap-1.5 pt-1">
+            <input type="text" id="newShopItemName" placeholder="Aggiungi prodotto..." class="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
+            <input type="number" step="0.5" min="0" id="newShopItemPrice" placeholder="€" class="w-16 bg-slate-950 border border-slate-700 rounded-xl px-2 py-2 text-xs font-bold text-center text-emerald-300" />
+            <button type="button" onclick="addShopItem()" class="px-3 py-2 rounded-xl bg-emerald-600 text-white text-xs font-bold shrink-0">+</button>
+          </div>
+        </div>
+        <div id="shoppingListContainer" class="space-y-2"></div>
+      </div>
     </section>
   </main>
 
-  <!-- BARRA DI NAVIGAZIONE INFERIORE (5 SCHEDE — NUTRIZIONE IN BASSO A DESTRA) -->
+  <!-- BARRA DI NAVIGAZIONE INFERIORE (5 SCHEDE — NUTRIZIONE 4ª, OPZIONI A DESTRA) -->
   <nav class="fixed bottom-0 left-0 right-0 z-30 bg-[#090d16]/95 ios-blur border-t border-slate-800/80" style="padding-bottom: var(--sab);">
     <div class="max-w-lg mx-auto grid grid-cols-5 h-16">
       <button type="button" onclick="switchTab('workout')" id="nav-workout" class="flex flex-col items-center justify-center gap-1 text-blue-400"><i data-lucide="dumbbell" class="w-5 h-5"></i><span class="text-[10px] font-semibold">Allenam.</span></button>
       <button type="button" onclick="switchTab('history')" id="nav-history" class="flex flex-col items-center justify-center gap-1 text-slate-400"><i data-lucide="calendar-days" class="w-5 h-5"></i><span class="text-[10px] font-semibold">Calendario</span></button>
       <button type="button" onclick="switchTab('analytics')" id="nav-analytics" class="flex flex-col items-center justify-center gap-1 text-slate-400"><i data-lucide="line-chart" class="w-5 h-5"></i><span class="text-[10px] font-semibold">Progressi</span></button>
-      <button type="button" onclick="switchTab('settings')" id="nav-settings" class="flex flex-col items-center justify-center gap-1 text-slate-400"><i data-lucide="settings" class="w-5 h-5"></i><span class="text-[10px] font-semibold">Opzioni</span></button>
       <button type="button" onclick="switchTab('nutrition')" id="nav-nutrition" class="flex flex-col items-center justify-center gap-1 text-slate-400"><i data-lucide="utensils" class="w-5 h-5"></i><span class="text-[10px] font-semibold">Nutrizione</span></button>
+      <button type="button" onclick="switchTab('settings')" id="nav-settings" class="flex flex-col items-center justify-center gap-1 text-slate-400"><i data-lucide="settings" class="w-5 h-5"></i><span class="text-[10px] font-semibold">Opzioni</span></button>
     </div>
   </nav>
 
@@ -543,6 +686,95 @@
       </div>
       <div class="p-4 border-t border-slate-800 bg-slate-950/60">
         <button type="button" onclick="applyEditedRoutineToLiveWorkout()" class="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs flex items-center justify-center gap-1.5"><i data-lucide="check" class="w-4 h-4"></i> Applica e Torna all'Allenamento</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODALE LOG RAPIDO RICETTA (CON GRAMMI MODIFICABILI & DIVISIONE PORZIONI MEAL PREP) -->
+  <div id="recipeQuickLogModal" class="fixed inset-0 z-[95] bg-black/85 ios-blur hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-slate-900 border-t sm:border border-slate-800 rounded-t-3xl sm:rounded-3xl w-full max-w-lg max-h-[92vh] flex flex-col overflow-hidden shadow-2xl">
+      <div class="px-5 py-4 border-b border-slate-800 flex items-center justify-between">
+        <div><h3 id="recipeLogTitle" class="text-base font-bold text-white">Ricetta</h3><p class="text-xs text-emerald-400">Adatta i grammi (es. 570g invece di 500g) e le porzioni</p></div>
+        <button type="button" onclick="closeRecipeQuickLogModal()" class="p-2 rounded-full bg-slate-800 text-slate-400 hover:text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
+      </div>
+      <div class="p-4 overflow-y-auto space-y-3 flex-1">
+        <div class="grid grid-cols-3 gap-2">
+          <div>
+            <label class="text-[10px] font-bold uppercase text-slate-400">Pasto</label>
+            <select id="recipeLogMealSelect" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-2 py-2 text-xs font-bold text-white mt-1">
+              <option value="Colazione">Colazione</option><option value="Pranzo">Pranzo</option><option value="Cena">Cena</option><option value="Spuntini">Spuntini</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-[10px] font-bold uppercase text-indigo-300" title="In quante porzioni dividi gli ingredienti qui sotto">Porz. Totali (÷)</label>
+            <input type="number" step="0.5" min="0.5" value="1" id="recipeLogTotalServings" oninput="updateRecipeQuickLogTotals()" class="w-full bg-slate-950 border border-indigo-500/40 rounded-xl px-2 py-2 text-sm font-extrabold text-center text-indigo-300 mt-1" />
+          </div>
+          <div>
+            <label class="text-[10px] font-bold uppercase text-emerald-300" title="Quante porzioni mangi oggi">Mangiate (×)</label>
+            <input type="number" step="0.5" min="0.25" value="1" id="recipeLogEatenServings" oninput="updateRecipeQuickLogTotals()" class="w-full bg-slate-950 border border-emerald-500/40 rounded-xl px-2 py-2 text-sm font-extrabold text-center text-emerald-300 mt-1" />
+          </div>
+        </div>
+        <p id="recipeLogPortionHint" class="text-[10px] text-slate-400 bg-slate-950/70 border border-slate-800 rounded-xl px-3 py-1.5">
+          Suggerimento: per un meal prep metti i grammi della padella intera (es. 570g macinato), imposta <strong>Porz. Totali = 5</strong> e <strong>Mangiate = 2</strong>.
+        </p>
+
+        <div id="recipeLogIngredientsList" class="space-y-2"></div>
+
+        <!-- Aggiungi ingrediente extra al volo -->
+        <div class="flex items-center gap-1.5 pt-1">
+          <select id="quickLogAddFoodSelect" class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-2 text-xs text-slate-200"></select>
+          <input type="number" id="quickLogAddGramsInput" value="50" class="w-16 bg-slate-950 border border-slate-800 rounded-xl px-2 py-2 text-xs font-bold text-center text-white" />
+          <button type="button" onclick="addIngredientToQuickLog()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-400 text-xs font-bold shrink-0">+ Ing.</button>
+        </div>
+
+        <div class="grid grid-cols-4 gap-2 bg-slate-950 border border-slate-800 rounded-2xl p-3 text-center">
+          <div><div class="text-[10px] text-slate-400">Calorie</div><div id="recLogKcal" class="text-sm font-extrabold text-white">0</div></div>
+          <div><div class="text-[10px] text-blue-400">Carbo</div><div id="recLogCarbs" class="text-sm font-extrabold text-blue-300">0g</div></div>
+          <div><div class="text-[10px] text-emerald-400">Proteine</div><div id="recLogProt" class="text-sm font-extrabold text-emerald-300">0g</div></div>
+          <div><div class="text-[10px] text-amber-400">Grassi</div><div id="recLogFat" class="text-sm font-extrabold text-amber-300">0g</div></div>
+        </div>
+      </div>
+      <div class="p-4 border-t border-slate-800 bg-slate-950/60 flex items-center gap-2">
+        <button type="button" onclick="confirmLogRecipe(true)" class="w-2/5 py-3 rounded-xl bg-slate-800 text-slate-200 font-semibold text-xs">Salva Dosi &amp; Logga</button>
+        <button type="button" onclick="confirmLogRecipe(false)" class="w-3/5 py-3 rounded-xl bg-emerald-600 text-white font-bold text-xs">Aggiungi Oggi</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODALE CREA / MODIFICA RICETTA -->
+  <div id="recipeEditorModal" class="fixed inset-0 z-[95] bg-black/85 ios-blur hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-slate-900 border-t sm:border border-slate-800 rounded-t-3xl sm:rounded-3xl w-full max-w-lg max-h-[92vh] flex flex-col overflow-hidden shadow-2xl">
+      <div class="px-5 py-4 border-b border-slate-800 flex items-center justify-between">
+        <div>
+          <h3 id="recipeEditorModalTitle" class="text-base font-bold text-white">Crea Nuova Ricetta</h3>
+          <p class="text-[11px] text-emerald-400">Modifica grammi, ingredienti o porzioni della teglia</p>
+        </div>
+        <button type="button" onclick="closeRecipeEditorModal()" class="p-2 rounded-full bg-slate-800 text-slate-400 hover:text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
+      </div>
+      <div class="p-4 overflow-y-auto space-y-3 flex-1">
+        <div class="grid grid-cols-12 gap-2">
+          <div class="col-span-6"><label class="text-[10px] font-bold uppercase text-slate-400">Nome Ricetta</label><input type="text" id="newRecipeNameInput" placeholder="Es. 5 Burrito Conad" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm font-bold text-white mt-1" /></div>
+          <div class="col-span-3"><label class="text-[10px] font-bold uppercase text-slate-400">Pasto</label><select id="newRecipeMealInput" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-1.5 py-2 text-xs font-bold text-white mt-1"><option value="Colazione">Colazione</option><option value="Pranzo" selected>Pranzo</option><option value="Cena">Cena</option><option value="Spuntini">Spuntini</option></select></div>
+          <div class="col-span-3"><label class="text-[10px] font-bold uppercase text-indigo-300">Porzioni</label><input type="number" step="0.5" min="0.5" value="1" id="newRecipeServingsInput" oninput="updateDraftRecipePreview()" class="w-full bg-slate-950 border border-indigo-500/40 rounded-xl px-2 py-2 text-sm font-extrabold text-center text-indigo-300 mt-1" /></div>
+        </div>
+        <div class="bg-slate-950 border border-slate-800 rounded-2xl p-3 space-y-2">
+          <label class="text-[10px] font-bold uppercase text-emerald-400">Aggiungi Ingrediente</label>
+          <div class="flex items-center gap-2">
+            <select id="newRecipeFoodSelect" class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-2 text-xs text-white"></select>
+            <input type="number" id="newRecipeGramsInput" value="100" class="w-20 bg-slate-900 border border-slate-700 rounded-xl px-2 py-2 text-xs font-bold text-center text-white" />
+            <button type="button" onclick="addIngredientToDraftRecipe()" class="px-3 py-2 rounded-xl bg-emerald-600 text-white text-xs font-bold">+</button>
+          </div>
+        </div>
+        <div id="draftRecipeIngredientsContainer" class="space-y-2"></div>
+        <div id="draftRecipePreviewBox" class="grid grid-cols-4 gap-2 bg-slate-950 border border-slate-800 rounded-2xl p-2.5 text-center">
+          <div><div class="text-[9px] text-slate-400">Kcal / Porz</div><div id="draftPrevKcal" class="text-xs font-extrabold text-white">0</div></div>
+          <div><div class="text-[9px] text-blue-400">Carbo</div><div id="draftPrevCarbs" class="text-xs font-extrabold text-blue-300">0g</div></div>
+          <div><div class="text-[9px] text-emerald-400">Proteine</div><div id="draftPrevProt" class="text-xs font-extrabold text-emerald-300">0g</div></div>
+          <div><div class="text-[9px] text-amber-400">Grassi</div><div id="draftPrevFat" class="text-xs font-extrabold text-amber-300">0g</div></div>
+        </div>
+      </div>
+      <div class="p-4 border-t border-slate-800 bg-slate-950/60">
+        <button type="button" id="saveRecipeModalBtn" onclick="saveNewRecipe()" class="w-full py-3 rounded-xl bg-emerald-600 text-white font-bold text-xs">Salva Ricetta</button>
       </div>
     </div>
   </div>
@@ -649,37 +881,58 @@
     </div>
   </div>
 
-  <!-- MODALE PORZIONE / MODIFICA RAPIDA VOCE DIARIO -->
+  <!-- MODALE PORZIONE STILE YAZIO (DOPPIA ROTELLA QUANTITÀ + UNITÀ DI MISURA) -->
   <div id="foodPortionModal" class="fixed inset-0 z-[95] bg-black/85 ios-blur hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
-    <div class="bg-slate-900 border-t sm:border border-slate-800 rounded-t-3xl sm:rounded-3xl w-full max-w-md p-5 space-y-4 shadow-2xl">
+    <div class="bg-slate-900 border-t sm:border border-slate-800 rounded-t-3xl sm:rounded-3xl w-full max-w-md p-5 space-y-3.5 shadow-2xl max-h-[94vh] overflow-y-auto">
       <div class="flex items-start justify-between gap-2">
         <div class="min-w-0">
-          <span id="portionSourceBadge" class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300">Dispensa</span>
+          <div class="flex items-center gap-1.5">
+            <span id="portionSourceBadge" class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300">Dispensa</span>
+            <span id="portionGramsEqBadge" class="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-300">= 100 g</span>
+          </div>
           <h4 id="portionFoodName" class="text-base font-bold text-white mt-1 truncate">Alimento</h4>
           <p id="portionFoodBrand" class="text-[11px] text-slate-400 truncate"></p>
         </div>
         <button type="button" onclick="closeFoodPortionModal()" class="p-1.5 rounded-full bg-slate-800 text-slate-400 hover:text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
       </div>
-      <div class="grid grid-cols-2 gap-2.5">
-        <div>
-          <label class="text-[10px] font-bold uppercase text-slate-400">Quantità (g / ml)</label>
-          <input type="number" id="portionGramsInput" inputmode="decimal" value="100" oninput="updateFoodPortionPreview()" class="w-full bg-slate-950 border border-emerald-500/50 rounded-xl px-3 py-2.5 text-base font-extrabold text-white mt-1 focus:outline-none" />
+
+      <!-- Barra Input diretto + Pasto (sincronizzata in tempo reale con le rotelle sotto) -->
+      <div class="grid grid-cols-12 gap-2">
+        <div class="col-span-5">
+          <label class="text-[10px] font-bold uppercase text-slate-400">Quantità esatta</label>
+          <input type="number" step="0.25" id="portionQtyInput" inputmode="decimal" value="100" oninput="onPortionQtyTyped(this.value)" class="w-full bg-slate-950 border border-emerald-500/50 rounded-xl px-3 py-2 text-base font-extrabold text-white mt-1 focus:outline-none focus:border-emerald-400" />
         </div>
-        <div>
+        <div class="col-span-3">
+          <label class="text-[10px] font-bold uppercase text-slate-400">Unità</label>
+          <div id="portionActiveUnitPill" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-2 py-2.5 text-xs font-bold text-emerald-300 mt-1 text-center truncate">g</div>
+        </div>
+        <div class="col-span-4">
           <label class="text-[10px] font-bold uppercase text-slate-400">Pasto</label>
-          <select id="portionMealSelect" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-sm font-bold text-white mt-1 focus:outline-none">
+          <select id="portionMealSelect" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-2 py-2.5 text-xs font-bold text-white mt-1 focus:outline-none">
             <option value="Colazione">Colazione</option><option value="Pranzo">Pranzo</option><option value="Cena">Cena</option><option value="Spuntini">Spuntini</option>
           </select>
         </div>
       </div>
-      <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-        <button type="button" onclick="setQuickPortionGrams(30)" class="px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-xs font-semibold text-slate-300">30g</button>
-        <button type="button" onclick="setQuickPortionGrams(50)" class="px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-xs font-semibold text-slate-300">50g</button>
-        <button type="button" onclick="setQuickPortionGrams(80)" class="px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-xs font-semibold text-slate-300">80g</button>
-        <button type="button" onclick="setQuickPortionGrams(100)" class="px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-xs font-semibold text-slate-300">100g</button>
-        <button type="button" onclick="setQuickPortionGrams(150)" class="px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-xs font-semibold text-slate-300">150g</button>
-        <button type="button" onclick="setQuickPortionGrams(200)" class="px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-xs font-semibold text-slate-300">200g</button>
+
+      <!-- DOPPIA ROTELLA SCORREVOLE STILE YAZIO (Quantità a sinistra | Unità di misura a destra) -->
+      <div class="bg-slate-950 border border-slate-800 rounded-2xl p-2">
+        <div class="grid grid-cols-12 text-[9px] font-bold uppercase tracking-wider text-slate-500 px-3 pb-1">
+          <div class="col-span-5 text-center">Scorri Numero</div>
+          <div class="col-span-7 text-center">Scorri Unità di Misura</div>
+        </div>
+        <div class="yazio-wheel-wrap">
+          <div class="yazio-wheel-band"></div>
+          <div class="grid grid-cols-12 relative z-10">
+            <div id="portionQtyWheel" onscroll="onQtyWheelScroll()" class="col-span-5 yazio-wheel-col no-scrollbar"></div>
+            <div id="portionUnitWheel" onscroll="onUnitWheelScroll()" class="col-span-7 yazio-wheel-col no-scrollbar border-l border-slate-800/70"></div>
+          </div>
+        </div>
       </div>
+
+      <!-- Chip rapidi adattati all'unità selezionata -->
+      <div id="portionQuickChips" class="flex items-center gap-1.5 overflow-x-auto no-scrollbar"></div>
+
+      <!-- Anteprima Macro & Calorie -->
       <div class="grid grid-cols-4 gap-2 bg-slate-950 border border-slate-800 rounded-2xl p-3 text-center">
         <div><div class="text-[10px] text-slate-400">Calorie</div><div id="prevPortionKcal" class="text-sm font-extrabold text-white">0</div></div>
         <div><div class="text-[10px] text-blue-400">Carbo</div><div id="prevPortionCarbs" class="text-sm font-extrabold text-blue-300">0g</div></div>
@@ -732,58 +985,17 @@
     </div>
   </div>
 
-  <!-- MODALE LOG RAPIDO RICETTA -->
-  <div id="recipeQuickLogModal" class="fixed inset-0 z-[95] bg-black/85 ios-blur hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
-    <div class="bg-slate-900 border-t sm:border border-slate-800 rounded-t-3xl sm:rounded-3xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
+  <!-- MODALE SMART COACH: "COSA MI MANCA OGGI?" -->
+  <div id="smartCoachModal" class="fixed inset-0 z-[96] bg-black/85 ios-blur hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-slate-900 border-t sm:border border-slate-800 rounded-t-3xl sm:rounded-3xl w-full max-w-lg max-h-[88vh] flex flex-col overflow-hidden shadow-2xl">
       <div class="px-5 py-4 border-b border-slate-800 flex items-center justify-between">
-        <div><h3 id="recipeLogTitle" class="text-base font-bold text-white">Ricetta</h3><p class="text-xs text-emerald-400">Adatta i grammi al volo prima di inserirla</p></div>
-        <button type="button" onclick="closeRecipeQuickLogModal()" class="p-2 rounded-full bg-slate-800 text-slate-400 hover:text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
-      </div>
-      <div class="p-4 overflow-y-auto space-y-3 flex-1">
-        <div class="grid grid-cols-2 gap-2.5">
-          <div><label class="text-[10px] font-bold uppercase text-slate-400">Pasto</label><select id="recipeLogMealSelect" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-white mt-1"><option value="Colazione">Colazione</option><option value="Pranzo">Pranzo</option><option value="Cena">Cena</option><option value="Spuntini">Spuntini</option></select></div>
-          <div><label class="text-[10px] font-bold uppercase text-slate-400">Porzioni (es. 2 roll)</label><input type="number" step="0.5" min="0.5" value="1" id="recipeLogMultiplier" oninput="updateRecipeQuickLogTotals()" class="w-full bg-slate-950 border border-emerald-500/40 rounded-xl px-3 py-2 text-sm font-extrabold text-white mt-1" /></div>
+        <div>
+          <h3 class="text-base font-bold text-white flex items-center gap-2"><i data-lucide="wand-sparkles" class="w-4 h-4 text-emerald-400"></i> Coach "Cosa Mangio Adesso?"</h3>
+          <p id="smartCoachSubtitle" class="text-xs text-emerald-400">Suggerimenti intelligenti in base ai macro rimasti oggi</p>
         </div>
-        <div id="recipeLogIngredientsList" class="space-y-2"></div>
-        <div class="grid grid-cols-4 gap-2 bg-slate-950 border border-slate-800 rounded-2xl p-3 text-center">
-          <div><div class="text-[10px] text-slate-400">Calorie</div><div id="recLogKcal" class="text-sm font-extrabold text-white">0</div></div>
-          <div><div class="text-[10px] text-blue-400">Carbo</div><div id="recLogCarbs" class="text-sm font-extrabold text-blue-300">0g</div></div>
-          <div><div class="text-[10px] text-emerald-400">Proteine</div><div id="recLogProt" class="text-sm font-extrabold text-emerald-300">0g</div></div>
-          <div><div class="text-[10px] text-amber-400">Grassi</div><div id="recLogFat" class="text-sm font-extrabold text-amber-300">0g</div></div>
-        </div>
+        <button type="button" onclick="closeSmartCoachModal()" class="p-2 rounded-full bg-slate-800 text-slate-400 hover:text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
       </div>
-      <div class="p-4 border-t border-slate-800 bg-slate-950/60 flex items-center gap-2">
-        <button type="button" onclick="confirmLogRecipe(true)" class="w-2/5 py-3 rounded-xl bg-slate-800 text-slate-200 font-semibold text-xs">Salva Dosi &amp; Logga</button>
-        <button type="button" onclick="confirmLogRecipe(false)" class="w-3/5 py-3 rounded-xl bg-emerald-600 text-white font-bold text-xs">Aggiungi Oggi</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- MODALE CREA RICETTA -->
-  <div id="recipeEditorModal" class="fixed inset-0 z-[95] bg-black/85 ios-blur hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
-    <div class="bg-slate-900 border-t sm:border border-slate-800 rounded-t-3xl sm:rounded-3xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
-      <div class="px-5 py-4 border-b border-slate-800 flex items-center justify-between">
-        <h3 class="text-base font-bold text-white">Crea Nuova Ricetta</h3>
-        <button type="button" onclick="closeRecipeEditorModal()" class="p-2 rounded-full bg-slate-800 text-slate-400 hover:text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
-      </div>
-      <div class="p-4 overflow-y-auto space-y-3 flex-1">
-        <div class="grid grid-cols-3 gap-2">
-          <div class="col-span-2"><label class="text-[10px] font-bold uppercase text-slate-400">Nome Ricetta</label><input type="text" id="newRecipeNameInput" placeholder="Es. Pasta Ragù 50/50" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm font-bold text-white mt-1" /></div>
-          <div><label class="text-[10px] font-bold uppercase text-slate-400">Pasto</label><select id="newRecipeMealInput" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-2 py-2 text-xs font-bold text-white mt-1"><option value="Colazione">Colazione</option><option value="Pranzo" selected>Pranzo</option><option value="Cena">Cena</option><option value="Spuntini">Spuntini</option></select></div>
-        </div>
-        <div class="bg-slate-950 border border-slate-800 rounded-2xl p-3 space-y-2">
-          <label class="text-[10px] font-bold uppercase text-emerald-400">Aggiungi Ingrediente</label>
-          <div class="flex items-center gap-2">
-            <select id="newRecipeFoodSelect" class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-2 text-xs text-white"></select>
-            <input type="number" id="newRecipeGramsInput" value="100" class="w-20 bg-slate-900 border border-slate-700 rounded-xl px-2 py-2 text-xs font-bold text-center text-white" />
-            <button type="button" onclick="addIngredientToDraftRecipe()" class="px-3 py-2 rounded-xl bg-emerald-600 text-white text-xs font-bold">+</button>
-          </div>
-        </div>
-        <div id="draftRecipeIngredientsContainer" class="space-y-2"></div>
-      </div>
-      <div class="p-4 border-t border-slate-800 bg-slate-950/60">
-        <button type="button" onclick="saveNewRecipe()" class="w-full py-3 rounded-xl bg-emerald-600 text-white font-bold text-xs">Salva Ricetta</button>
-      </div>
+      <div id="smartCoachBody" class="p-4 overflow-y-auto space-y-2.5 flex-1"></div>
     </div>
   </div>
 
@@ -845,7 +1057,9 @@
             <option value="8.5">Corsa media / Jogging (MET 8.5)</option>
             <option value="6.0">Andature, Salti &amp; Pliometria (MET 6.0)</option>
             <option value="5.0">Richiamo Casa Manubri / Corpo Libero (MET 5.0)</option>
-            <option value="3.5">Camminata veloce / Spostamenti (MET 3.5)</option>
+            <option value="3.5">Camminata veloce / Spostamenti Forlì-Cesena (MET 3.5)</option>
+            <option value="2.2">Lezioni in Università &amp; Campus (extra netto)</option>
+            <option value="1.6">Sessione Studio Intenso (extra netto)</option>
             <option value="custom">Inserisci Kcal manuali</option>
           </select>
         </div>
@@ -985,64 +1199,103 @@
     ];
 
     const DEFAULT_FOODS = [
-      { id: 'f_avena', name: 'Fiocchi / Farina d’Avena', brand: 'Dispensa', kcal: 375, c: 60, p: 13.5, f: 7, m: { fiber: 10, vitC: 0, vitD: 0, vitB12: 0, folate: 56, calcium: 54, iron: 4.7, magnesium: 177, potassium: 429, zinc: 4, omega3: 0.1, sodium: 2 } },
-      { id: 'f_albume', name: 'Albume d’Uovo', brand: 'Dispensa', kcal: 52, c: 0.7, p: 11, f: 0.2, m: { fiber: 0, vitC: 0, vitD: 0, vitB12: 0.1, folate: 4, calcium: 7, iron: 0.1, magnesium: 11, potassium: 163, zinc: 0, omega3: 0, sodium: 166 } },
-      { id: 'f_uovo', name: 'Uovo Intero (1 pz ≈ 60g)', brand: 'Dispensa', kcal: 145, c: 0.8, p: 12.6, f: 10, m: { fiber: 0, vitC: 0, vitD: 2.0, vitB12: 1.1, folate: 47, calcium: 56, iron: 1.8, magnesium: 12, potassium: 138, zinc: 1.3, omega3: 0.1, sodium: 142 } },
-      { id: 'f_marmellata', name: 'Marmellata / Confettura', brand: 'Dispensa', kcal: 220, c: 54, p: 0.4, f: 0.1, m: { fiber: 1.2, vitC: 8, vitD: 0, vitB12: 0, folate: 5, calcium: 15, iron: 0.3, magnesium: 5, potassium: 80, zinc: 0, omega3: 0, sodium: 15 } },
-      { id: 'f_fondente', name: 'Cioccolato Fondente 80%', brand: 'Dispensa', kcal: 580, c: 28, p: 8.5, f: 45, m: { fiber: 11, vitC: 0, vitD: 0, vitB12: 0, folate: 10, calcium: 70, iron: 11.5, magnesium: 228, potassium: 715, zinc: 3.3, omega3: 0, sodium: 20 } },
-      { id: 'f_crema_nocciole', name: 'Crema Nocciole / Mandorle 100%', brand: 'Dispensa', kcal: 625, c: 11, p: 16, f: 58, m: { fiber: 9.0, vitC: 0, vitD: 0, vitB12: 0, folate: 75, calcium: 160, iron: 3.8, magnesium: 210, potassium: 680, zinc: 2.8, omega3: 0.1, sodium: 2 } },
-      { id: 'f_pollo', name: 'Petto di Pollo (crudo)', brand: 'Macelleria', kcal: 110, c: 0, p: 23, f: 1.5, m: { fiber: 0, vitC: 0, vitD: 0.1, vitB12: 0.4, folate: 4, calcium: 11, iron: 0.7, magnesium: 28, potassium: 330, zinc: 1.0, omega3: 0.05, sodium: 65 } },
-      { id: 'f_sovracosce', name: 'Sovracosce Pollo Disossate', brand: 'Macelleria', kcal: 150, c: 0, p: 20, f: 7.5, m: { fiber: 0, vitC: 0, vitD: 0.2, vitB12: 0.5, folate: 6, calcium: 12, iron: 1.0, magnesium: 24, potassium: 280, zinc: 1.8, omega3: 0.08, sodium: 75 } },
-      { id: 'f_macinato', name: 'Macinato Bovino Magro', brand: 'Macelleria', kcal: 175, c: 0, p: 20.5, f: 10, m: { fiber: 0, vitC: 0, vitD: 0.1, vitB12: 2.5, folate: 8, calcium: 12, iron: 2.4, magnesium: 22, potassium: 340, zinc: 5.2, omega3: 0.08, sodium: 68 } },
-      { id: 'f_lonza', name: 'Lonza di Maiale', brand: 'Macelleria', kcal: 143, c: 0, p: 21.5, f: 6, m: { fiber: 0, vitC: 0, vitD: 0.5, vitB12: 0.7, folate: 5, calcium: 8, iron: 0.9, magnesium: 26, potassium: 390, zinc: 2.1, omega3: 0.04, sodium: 58 } },
-      { id: 'f_sgombro', name: 'Sgombro al Naturale/Olio sgocc.', brand: 'Scatoletta', kcal: 185, c: 0, p: 21, f: 11, m: { fiber: 0, vitC: 0, vitD: 8.0, vitB12: 8.7, folate: 2, calcium: 35, iron: 1.6, magnesium: 60, potassium: 314, zinc: 0.7, omega3: 2.2, sodium: 320 } },
-      { id: 'f_tonno', name: 'Tonno sgocciolato', brand: 'Scatoletta', kcal: 190, c: 0, p: 24, f: 10, m: { fiber: 0, vitC: 0, vitD: 1.7, vitB12: 2.5, folate: 4, calcium: 14, iron: 1.3, magnesium: 30, potassium: 240, zinc: 0.8, omega3: 0.3, sodium: 340 } },
-      { id: 'f_merluzzo', name: 'Merluzzo / Nasello Surgelato', brand: 'Surgelati', kcal: 82, c: 0, p: 18, f: 0.7, m: { fiber: 0, vitC: 0, vitD: 1.0, vitB12: 1.1, folate: 7, calcium: 16, iron: 0.4, magnesium: 32, potassium: 360, zinc: 0.5, omega3: 0.25, sodium: 78 } },
-      { id: 'f_pasta', name: 'Pasta di Semola (cruda)', brand: 'Dispensa', kcal: 355, c: 71, p: 13, f: 1.5, m: { fiber: 3.2, vitC: 0, vitD: 0, vitB12: 0, folate: 20, calcium: 22, iron: 1.4, magnesium: 53, potassium: 223, zinc: 1.4, omega3: 0, sodium: 6 } },
-      { id: 'f_riso', name: 'Riso Basmati / Bianco (crudo)', brand: 'Dispensa', kcal: 356, c: 78, p: 7.5, f: 0.7, m: { fiber: 1.4, vitC: 0, vitD: 0, vitB12: 0, folate: 8, calcium: 10, iron: 0.8, magnesium: 25, potassium: 115, zinc: 1.1, omega3: 0, sodium: 5 } },
-      { id: 'f_pane', name: 'Pane / Panino / Bauletto', brand: 'Forno', kcal: 265, c: 52, p: 8.5, f: 2.5, m: { fiber: 4.0, vitC: 0, vitD: 0, vitB12: 0, folate: 35, calcium: 40, iron: 1.8, magnesium: 35, potassium: 160, zinc: 1.0, omega3: 0, sodium: 450 } },
-      { id: 'f_piadina', name: 'Piadina da Roll (1 pz ≈ 75g)', brand: 'Conad', kcal: 315, c: 48, p: 8, f: 9.5, m: { fiber: 2.8, vitC: 0, vitD: 0, vitB12: 0, folate: 20, calcium: 25, iron: 1.2, magnesium: 22, potassium: 120, zinc: 0.7, omega3: 0, sodium: 580 } },
-      { id: 'f_patate', name: 'Patate', brand: 'Orto', kcal: 80, c: 18, p: 2, f: 0.1, m: { fiber: 2.2, vitC: 19, vitD: 0, vitB12: 0, folate: 16, calcium: 12, iron: 0.8, magnesium: 23, potassium: 425, zinc: 0.3, omega3: 0, sodium: 6 } },
-      { id: 'f_fagioli', name: 'Fagioli Rossi / Cannellini (cotti)', brand: 'Barattolo', kcal: 112, c: 17, p: 7.8, f: 0.6, m: { fiber: 6.8, vitC: 1, vitD: 0, vitB12: 0, folate: 130, calcium: 35, iron: 2.4, magnesium: 45, potassium: 405, zinc: 1.0, omega3: 0.1, sodium: 230 } },
-      { id: 'f_lenticchie', name: 'Lenticchie Cotte (barattolo)', brand: 'Barattolo', kcal: 105, c: 16, p: 7.5, f: 0.5, m: { fiber: 6.5, vitC: 1.5, vitD: 0, vitB12: 0, folate: 180, calcium: 19, iron: 3.3, magnesium: 36, potassium: 369, zinc: 1.3, omega3: 0, sodium: 210 } },
-      { id: 'f_lenticchie_secche', name: 'Lenticchie Rosse Secche (crude)', brand: 'Dispensa', kcal: 330, c: 53, p: 24, f: 1.2, m: { fiber: 11.0, vitC: 4, vitD: 0, vitB12: 0, folate: 430, calcium: 55, iron: 7.5, magnesium: 105, potassium: 950, zinc: 3.6, omega3: 0.1, sodium: 6 } },
-      { id: 'f_ceci', name: 'Ceci Cotti', brand: 'Barattolo', kcal: 130, c: 18, p: 7.5, f: 2.2, m: { fiber: 6.0, vitC: 1, vitD: 0, vitB12: 0, folate: 140, calcium: 45, iron: 2.5, magnesium: 42, potassium: 290, zinc: 1.4, omega3: 0.05, sodium: 220 } },
-      { id: 'f_hummus', name: 'Hummus di Ceci', brand: 'Banco Frigo', kcal: 235, c: 14, p: 7.5, f: 16, m: { fiber: 5.5, vitC: 2, vitD: 0, vitB12: 0, folate: 60, calcium: 48, iron: 2.2, magnesium: 65, potassium: 228, zinc: 1.5, omega3: 0.1, sodium: 380 } },
-      { id: 'f_grana', name: 'Grana Padano / Parmigiano', brand: 'Formaggio', kcal: 398, c: 0, p: 33, f: 29, m: { fiber: 0, vitC: 0, vitD: 0.5, vitB12: 1.5, folate: 8, calcium: 1165, iron: 0.2, magnesium: 43, potassium: 120, zinc: 4.0, omega3: 0.1, sodium: 650 } },
-      { id: 'f_stracchino', name: 'Stracchino', brand: 'Nonno Nanni', kcal: 295, c: 1.5, p: 17, f: 24.5, m: { fiber: 0, vitC: 0, vitD: 0.3, vitB12: 0.8, folate: 10, calcium: 560, iron: 0.2, magnesium: 18, potassium: 110, zinc: 1.5, omega3: 0.1, sodium: 420 } },
-      { id: 'f_yogurt_greco', name: 'Yogurt Greco 2% (per ricette)', brand: 'Banco Frigo', kcal: 73, c: 3.8, p: 9.8, f: 2, m: { fiber: 0, vitC: 0, vitD: 0, vitB12: 0.7, folate: 10, calcium: 115, iron: 0.1, magnesium: 11, potassium: 141, zinc: 0.5, omega3: 0, sodium: 36 } },
-      { id: 'f_soia_drink', name: 'Bevanda di Soia', brand: 'Dispensa', kcal: 42, c: 2.5, p: 3.3, f: 1.9, m: { fiber: 0.6, vitC: 0, vitD: 0.75, vitB12: 0.38, folate: 15, calcium: 120, iron: 0.5, magnesium: 18, potassium: 120, zinc: 0.3, omega3: 0.1, sodium: 40 } },
-      { id: 'f_latte_cocco', name: 'Latte di Cocco da Cucina', brand: 'Dispensa', kcal: 185, c: 3.5, p: 2.0, f: 18, m: { fiber: 0, vitC: 1, vitD: 0, vitB12: 0, folate: 14, calcium: 16, iron: 1.6, magnesium: 37, potassium: 220, zinc: 0.6, omega3: 0, sodium: 15 } },
-      { id: 'f_bresaola', name: 'Bresaola', brand: 'Affettato', kcal: 151, c: 0, p: 32, f: 2.6, m: { fiber: 0, vitC: 0, vitD: 0, vitB12: 1.6, folate: 6, calcium: 10, iron: 2.6, magnesium: 26, potassium: 510, zinc: 4.0, omega3: 0, sodium: 1550 } },
-      { id: 'f_fesa_tacchino', name: 'Fesa di Tacchino Affettata', brand: 'Affettato', kcal: 105, c: 1.0, p: 22, f: 1.5, m: { fiber: 0, vitC: 0, vitD: 0.1, vitB12: 0.4, folate: 5, calcium: 12, iron: 0.8, magnesium: 24, potassium: 280, zinc: 1.2, omega3: 0, sodium: 850 } },
-      { id: 'f_olio', name: 'Olio EVO (1 cucchiaio ≈ 10g)', brand: 'Dispensa', kcal: 884, c: 0, p: 0, f: 100, m: { fiber: 0, vitC: 0, vitD: 0, vitB12: 0, folate: 0, calcium: 1, iron: 0.5, magnesium: 0, potassium: 1, zinc: 0, omega3: 0.7, sodium: 2 } },
-      { id: 'f_frutta_secca', name: 'Frutta Secca Mista / Mandorle / Noci', brand: 'Snack', kcal: 615, c: 12, p: 19, f: 55, m: { fiber: 9.5, vitC: 0, vitD: 0, vitB12: 0, folate: 55, calcium: 180, iron: 3.4, magnesium: 230, potassium: 650, zinc: 3.1, omega3: 2.4, sodium: 5 } },
-      { id: 'f_banana', name: 'Banana (1 media ≈ 120g)', brand: 'Frutta', kcal: 89, c: 23, p: 1.1, f: 0.3, m: { fiber: 2.6, vitC: 8.7, vitD: 0, vitB12: 0, folate: 20, calcium: 5, iron: 0.3, magnesium: 27, potassium: 358, zinc: 0.2, omega3: 0, sodium: 1 } },
-      { id: 'f_mela', name: 'Mela / Arancia', brand: 'Frutta', kcal: 50, c: 12.5, p: 0.6, f: 0.2, m: { fiber: 2.4, vitC: 30, vitD: 0, vitB12: 0, folate: 18, calcium: 24, iron: 0.1, magnesium: 8, potassium: 145, zinc: 0.1, omega3: 0, sodium: 1 } },
-      { id: 'f_broccoli', name: 'Broccoli / Spinaci Surgelati', brand: 'Verdura', kcal: 32, c: 4.5, p: 3, f: 0.4, m: { fiber: 2.8, vitC: 65, vitD: 0, vitB12: 0, folate: 110, calcium: 70, iron: 1.6, magnesium: 45, potassium: 390, zinc: 0.5, omega3: 0.1, sodium: 45 } },
-      { id: 'f_pomodoro', name: 'Passata / Concentrato Pomodoro', brand: 'Dispensa', kcal: 42, c: 7.5, p: 1.8, f: 0.3, m: { fiber: 1.8, vitC: 18, vitD: 0, vitB12: 0, folate: 20, calcium: 18, iron: 0.9, magnesium: 18, potassium: 320, zinc: 0.2, omega3: 0, sodium: 180 } }
+      { id: 'f_avena', name: 'Fiocchi / Farina d’Avena', brand: 'Dispensa', kcal: 375, c: 60, p: 13.5, f: 7, defaultUnit: 'g', units: { cucchiaio: 10, tazza: 85, porzione: 60 }, m: { fiber: 10, vitC: 0, vitD: 0, vitB12: 0, folate: 56, calcium: 54, iron: 4.7, magnesium: 177, potassium: 429, zinc: 4, omega3: 0.1, sodium: 2 } },
+      { id: 'f_albume', name: 'Albume d’Uovo', brand: 'Dispensa', kcal: 52, c: 0.7, p: 11, f: 0.2, defaultUnit: 'ml', units: { ml: 1, pezzo: 35, bicchiere: 150, porzione: 125 }, m: { fiber: 0, vitC: 0, vitD: 0, vitB12: 0.1, folate: 4, calcium: 7, iron: 0.1, magnesium: 11, potassium: 163, zinc: 0, omega3: 0, sodium: 166 } },
+      { id: 'f_uovo', name: 'Uovo Intero (1 pz ≈ 60g)', brand: 'Dispensa', kcal: 145, c: 0.8, p: 12.6, f: 10, defaultUnit: 'pezzo', units: { pezzo: 60, porzione: 120 }, m: { fiber: 0, vitC: 0, vitD: 2.0, vitB12: 1.1, folate: 47, calcium: 56, iron: 1.8, magnesium: 12, potassium: 138, zinc: 1.3, omega3: 0.1, sodium: 142 } },
+      { id: 'f_marmellata', name: 'Marmellata / Confettura', brand: 'Dispensa', kcal: 220, c: 54, p: 0.4, f: 0.1, defaultUnit: 'cucchiaino', units: { cucchiaino: 8, cucchiaio: 20, porzione: 20 }, m: { fiber: 1.2, vitC: 8, vitD: 0, vitB12: 0, folate: 5, calcium: 15, iron: 0.3, magnesium: 5, potassium: 80, zinc: 0, omega3: 0, sodium: 15 } },
+      { id: 'f_fondente', name: 'Cioccolato Fondente 80%', brand: 'Dispensa', kcal: 580, c: 28, p: 8.5, f: 45, defaultUnit: 'quadretto', units: { quadretto: 10, porzione: 20 }, m: { fiber: 11, vitC: 0, vitD: 0, vitB12: 0, folate: 10, calcium: 70, iron: 11.5, magnesium: 228, potassium: 715, zinc: 3.3, omega3: 0, sodium: 20 } },
+      { id: 'f_crema_nocciole', name: 'Crema Nocciole / Mandorle 100%', brand: 'Dispensa', kcal: 625, c: 11, p: 16, f: 58, defaultUnit: 'cucchiaino', units: { cucchiaino: 6, cucchiaio: 15, porzione: 20 }, m: { fiber: 9.0, vitC: 0, vitD: 0, vitB12: 0, folate: 75, calcium: 160, iron: 3.8, magnesium: 210, potassium: 680, zinc: 2.8, omega3: 0.1, sodium: 2 } },
+      { id: 'f_pollo', name: 'Petto di Pollo (crudo)', brand: 'Macelleria', kcal: 110, c: 0, p: 23, f: 1.5, defaultUnit: 'g', units: { fetta: 90, porzione: 180 }, m: { fiber: 0, vitC: 0, vitD: 0.1, vitB12: 0.4, folate: 4, calcium: 11, iron: 0.7, magnesium: 28, potassium: 330, zinc: 1.0, omega3: 0.05, sodium: 65 } },
+      { id: 'f_sovracosce', name: 'Sovracosce Pollo Disossate', brand: 'Macelleria', kcal: 150, c: 0, p: 20, f: 7.5, defaultUnit: 'g', units: { pezzo: 120, porzione: 180 }, m: { fiber: 0, vitC: 0, vitD: 0.2, vitB12: 0.5, folate: 6, calcium: 12, iron: 1.0, magnesium: 24, potassium: 280, zinc: 1.8, omega3: 0.08, sodium: 75 } },
+      { id: 'f_macinato', name: 'Macinato Bovino Magro', brand: 'Macelleria', kcal: 175, c: 0, p: 20.5, f: 10, defaultUnit: 'g', units: { porzione: 150, vaschetta: 500 }, m: { fiber: 0, vitC: 0, vitD: 0.1, vitB12: 2.5, folate: 8, calcium: 12, iron: 2.4, magnesium: 22, potassium: 340, zinc: 5.2, omega3: 0.08, sodium: 68 } },
+      { id: 'f_lonza', name: 'Lonza di Maiale', brand: 'Macelleria', kcal: 143, c: 0, p: 21.5, f: 6, defaultUnit: 'g', units: { fetta: 80, porzione: 160 }, m: { fiber: 0, vitC: 0, vitD: 0.5, vitB12: 0.7, folate: 5, calcium: 8, iron: 0.9, magnesium: 26, potassium: 390, zinc: 2.1, omega3: 0.04, sodium: 58 } },
+      { id: 'f_sgombro', name: 'Sgombro al Naturale/Olio sgocc.', brand: 'Scatoletta', kcal: 185, c: 0, p: 21, f: 11, defaultUnit: 'scatoletta', units: { scatoletta: 90, porzione: 90 }, m: { fiber: 0, vitC: 0, vitD: 8.0, vitB12: 8.7, folate: 2, calcium: 35, iron: 1.6, magnesium: 60, potassium: 314, zinc: 0.7, omega3: 2.2, sodium: 320 } },
+      { id: 'f_tonno', name: 'Tonno sgocciolato', brand: 'Scatoletta', kcal: 190, c: 0, p: 24, f: 10, defaultUnit: 'scatoletta', units: { scatoletta: 56, barattolo: 112, porzione: 80 }, m: { fiber: 0, vitC: 0, vitD: 1.7, vitB12: 2.5, folate: 4, calcium: 14, iron: 1.3, magnesium: 30, potassium: 240, zinc: 0.8, omega3: 0.3, sodium: 340 } },
+      { id: 'f_merluzzo', name: 'Merluzzo / Nasello Surgelato', brand: 'Surgelati', kcal: 82, c: 0, p: 18, f: 0.7, defaultUnit: 'g', units: { pezzo: 100, porzione: 200 }, m: { fiber: 0, vitC: 0, vitD: 1.0, vitB12: 1.1, folate: 7, calcium: 16, iron: 0.4, magnesium: 32, potassium: 360, zinc: 0.5, omega3: 0.25, sodium: 78 } },
+      { id: 'f_pasta', name: 'Pasta di Semola (cruda)', brand: 'Dispensa', kcal: 355, c: 71, p: 13, f: 1.5, defaultUnit: 'g', units: { porzione: 110 }, m: { fiber: 3.2, vitC: 0, vitD: 0, vitB12: 0, folate: 20, calcium: 22, iron: 1.4, magnesium: 53, potassium: 223, zinc: 1.4, omega3: 0, sodium: 6 } },
+      { id: 'f_riso', name: 'Riso Basmati / Bianco (crudo)', brand: 'Dispensa', kcal: 356, c: 78, p: 7.5, f: 0.7, defaultUnit: 'g', units: { cucchiaio: 20, tazza: 180, porzione: 110 }, m: { fiber: 1.4, vitC: 0, vitD: 0, vitB12: 0, folate: 8, calcium: 10, iron: 0.8, magnesium: 25, potassium: 115, zinc: 1.1, omega3: 0, sodium: 5 } },
+      { id: 'f_pane', name: 'Pane / Panino / Bauletto', brand: 'Forno', kcal: 265, c: 52, p: 8.5, f: 2.5, defaultUnit: 'g', units: { fetta: 35, pezzo: 90, porzione: 100 }, m: { fiber: 4.0, vitC: 0, vitD: 0, vitB12: 0, folate: 35, calcium: 40, iron: 1.8, magnesium: 35, potassium: 160, zinc: 1.0, omega3: 0, sodium: 450 } },
+      { id: 'f_piadina', name: 'Piadina da Roll (1 pz ≈ 75g)', brand: 'Conad', kcal: 315, c: 48, p: 8, f: 9.5, defaultUnit: 'pezzo', units: { pezzo: 75, porzione: 75 }, m: { fiber: 2.8, vitC: 0, vitD: 0, vitB12: 0, folate: 20, calcium: 25, iron: 1.2, magnesium: 22, potassium: 120, zinc: 0.7, omega3: 0, sodium: 580 } },
+      { id: 'f_patate', name: 'Patate', brand: 'Orto', kcal: 80, c: 18, p: 2, f: 0.1, defaultUnit: 'g', units: { pezzo: 150, porzione: 300 }, m: { fiber: 2.2, vitC: 19, vitD: 0, vitB12: 0, folate: 16, calcium: 12, iron: 0.8, magnesium: 23, potassium: 425, zinc: 0.3, omega3: 0, sodium: 6 } },
+      { id: 'f_fagioli', name: 'Fagioli Rossi / Cannellini (cotti)', brand: 'Barattolo', kcal: 112, c: 17, p: 7.8, f: 0.6, defaultUnit: 'g', units: { cucchiaio: 25, barattolo: 240, porzione: 120 }, m: { fiber: 6.8, vitC: 1, vitD: 0, vitB12: 0, folate: 130, calcium: 35, iron: 2.4, magnesium: 45, potassium: 405, zinc: 1.0, omega3: 0.1, sodium: 230 } },
+      { id: 'f_lenticchie', name: 'Lenticchie Cotte (barattolo)', brand: 'Barattolo', kcal: 105, c: 16, p: 7.5, f: 0.5, defaultUnit: 'g', units: { cucchiaio: 25, barattolo: 240, porzione: 120 }, m: { fiber: 6.5, vitC: 1.5, vitD: 0, vitB12: 0, folate: 180, calcium: 19, iron: 3.3, magnesium: 36, potassium: 369, zinc: 1.3, omega3: 0, sodium: 210 } },
+      { id: 'f_lenticchie_secche', name: 'Lenticchie Rosse Secche (crude)', brand: 'Dispensa', kcal: 330, c: 53, p: 24, f: 1.2, defaultUnit: 'g', units: { cucchiaio: 18, porzione: 80 }, m: { fiber: 11.0, vitC: 4, vitD: 0, vitB12: 0, folate: 430, calcium: 55, iron: 7.5, magnesium: 105, potassium: 950, zinc: 3.6, omega3: 0.1, sodium: 6 } },
+      { id: 'f_ceci', name: 'Ceci Cotti', brand: 'Barattolo', kcal: 130, c: 18, p: 7.5, f: 2.2, defaultUnit: 'g', units: { cucchiaio: 25, barattolo: 240, porzione: 120 }, m: { fiber: 6.0, vitC: 1, vitD: 0, vitB12: 0, folate: 140, calcium: 45, iron: 2.5, magnesium: 42, potassium: 290, zinc: 1.4, omega3: 0.05, sodium: 220 } },
+      { id: 'f_hummus', name: 'Hummus di Ceci', brand: 'Banco Frigo', kcal: 235, c: 14, p: 7.5, f: 16, defaultUnit: 'cucchiaio', units: { cucchiaino: 8, cucchiaio: 20, porzione: 35 }, m: { fiber: 5.5, vitC: 2, vitD: 0, vitB12: 0, folate: 60, calcium: 48, iron: 2.2, magnesium: 65, potassium: 228, zinc: 1.5, omega3: 0.1, sodium: 380 } },
+      { id: 'f_grana', name: 'Grana Padano / Parmigiano', brand: 'Formaggio', kcal: 398, c: 0, p: 33, f: 29, defaultUnit: 'cucchiaio', units: { cucchiaino: 4, cucchiaio: 10, porzione: 25 }, m: { fiber: 0, vitC: 0, vitD: 0.5, vitB12: 1.5, folate: 8, calcium: 1165, iron: 0.2, magnesium: 43, potassium: 120, zinc: 4.0, omega3: 0.1, sodium: 650 } },
+      { id: 'f_stracchino', name: 'Stracchino', brand: 'Nonno Nanni', kcal: 295, c: 1.5, p: 17, f: 24.5, defaultUnit: 'g', units: { cucchiaio: 25, porzione: 50 }, m: { fiber: 0, vitC: 0, vitD: 0.3, vitB12: 0.8, folate: 10, calcium: 560, iron: 0.2, magnesium: 18, potassium: 110, zinc: 1.5, omega3: 0.1, sodium: 420 } },
+      { id: 'f_yogurt_greco', name: 'Yogurt Greco 2% (per ricette)', brand: 'Banco Frigo', kcal: 73, c: 3.8, p: 9.8, f: 2, defaultUnit: 'g', units: { cucchiaio: 25, vasetto: 150, porzione: 100 }, m: { fiber: 0, vitC: 0, vitD: 0, vitB12: 0.7, folate: 10, calcium: 115, iron: 0.1, magnesium: 11, potassium: 141, zinc: 0.5, omega3: 0, sodium: 36 } },
+      { id: 'f_soia_drink', name: 'Bevanda di Soia', brand: 'Dispensa', kcal: 42, c: 2.5, p: 3.3, f: 1.9, defaultUnit: 'ml', units: { ml: 1, bicchiere: 200, tazza: 250, porzione: 250 }, m: { fiber: 0.6, vitC: 0, vitD: 0.75, vitB12: 0.38, folate: 15, calcium: 120, iron: 0.5, magnesium: 18, potassium: 120, zinc: 0.3, omega3: 0.1, sodium: 40 } },
+      { id: 'f_latte_cocco', name: 'Latte di Cocco da Cucina', brand: 'Dispensa', kcal: 185, c: 3.5, p: 2.0, f: 18, defaultUnit: 'ml', units: { ml: 1, cucchiaio: 15, lattina: 400, porzione: 100 }, m: { fiber: 0, vitC: 1, vitD: 0, vitB12: 0, folate: 14, calcium: 16, iron: 1.6, magnesium: 37, potassium: 220, zinc: 0.6, omega3: 0, sodium: 15 } },
+      { id: 'f_bresaola', name: 'Bresaola', brand: 'Affettato', kcal: 151, c: 0, p: 32, f: 2.6, defaultUnit: 'g', units: { fetta: 15, vaschetta: 80, porzione: 70 }, m: { fiber: 0, vitC: 0, vitD: 0, vitB12: 1.6, folate: 6, calcium: 10, iron: 2.6, magnesium: 26, potassium: 510, zinc: 4.0, omega3: 0, sodium: 1550 } },
+      { id: 'f_fesa_tacchino', name: 'Fesa di Tacchino Affettata', brand: 'Affettato', kcal: 105, c: 1.0, p: 22, f: 1.5, defaultUnit: 'g', units: { fetta: 20, vaschetta: 100, porzione: 80 }, m: { fiber: 0, vitC: 0, vitD: 0.1, vitB12: 0.4, folate: 5, calcium: 12, iron: 0.8, magnesium: 24, potassium: 280, zinc: 1.2, omega3: 0, sodium: 850 } },
+      { id: 'f_olio', name: 'Olio EVO (1 cucchiaio ≈ 10g)', brand: 'Dispensa', kcal: 884, c: 0, p: 0, f: 100, defaultUnit: 'cucchiaio', units: { cucchiaino: 4.5, cucchiaio: 10, ml: 0.92, porzione: 10 }, m: { fiber: 0, vitC: 0, vitD: 0, vitB12: 0, folate: 0, calcium: 1, iron: 0.5, magnesium: 0, potassium: 1, zinc: 0, omega3: 0.7, sodium: 2 } },
+      { id: 'f_frutta_secca', name: 'Frutta Secca Mista / Mandorle / Noci', brand: 'Snack', kcal: 615, c: 12, p: 19, f: 55, defaultUnit: 'manciata', units: { manciata: 30, cucchiaio: 12, porzione: 30 }, m: { fiber: 9.5, vitC: 0, vitD: 0, vitB12: 0, folate: 55, calcium: 180, iron: 3.4, magnesium: 230, potassium: 650, zinc: 3.1, omega3: 2.4, sodium: 5 } },
+      { id: 'f_banana', name: 'Banana (1 media ≈ 120g)', brand: 'Frutta', kcal: 89, c: 23, p: 1.1, f: 0.3, defaultUnit: 'pezzo', units: { pezzo: 120, porzione: 120 }, m: { fiber: 2.6, vitC: 8.7, vitD: 0, vitB12: 0, folate: 20, calcium: 5, iron: 0.3, magnesium: 27, potassium: 358, zinc: 0.2, omega3: 0, sodium: 1 } },
+      { id: 'f_mela', name: 'Mela / Arancia', brand: 'Frutta', kcal: 50, c: 12.5, p: 0.6, f: 0.2, defaultUnit: 'pezzo', units: { pezzo: 170, porzione: 170 }, m: { fiber: 2.4, vitC: 30, vitD: 0, vitB12: 0, folate: 18, calcium: 24, iron: 0.1, magnesium: 8, potassium: 145, zinc: 0.1, omega3: 0, sodium: 1 } },
+      { id: 'f_broccoli', name: 'Broccoli / Spinaci Surgelati', brand: 'Verdura', kcal: 32, c: 4.5, p: 3, f: 0.4, defaultUnit: 'g', units: { manciata: 50, porzione: 180 }, m: { fiber: 2.8, vitC: 65, vitD: 0, vitB12: 0, folate: 110, calcium: 70, iron: 1.6, magnesium: 45, potassium: 390, zinc: 0.5, omega3: 0.1, sodium: 45 } },
+      { id: 'f_pomodoro', name: 'Passata / Concentrato Pomodoro', brand: 'Dispensa', kcal: 42, c: 7.5, p: 1.8, f: 0.3, defaultUnit: 'g', units: { cucchiaio: 20, ml: 1, porzione: 100 }, m: { fiber: 1.8, vitC: 18, vitD: 0, vitB12: 0, folate: 20, calcium: 18, iron: 0.9, magnesium: 18, potassium: 320, zinc: 0.2, omega3: 0, sodium: 180 } }
+    ];
+
+    // Catalogo Unità di Misura stile Yazio (con icone e grammi base predefiniti)
+    const UNIT_CATALOG = {
+      g:          { label: 'Grammi (g)',      short: 'g',          grams: 1,    mode: 'mass',  icon: 'scale' },
+      ml:         { label: 'Millilitri (ml)', short: 'ml',         grams: 1,    mode: 'mass',  icon: 'droplet' },
+      kg:         { label: 'Chilogrammi',     short: 'kg',         grams: 1000, mode: 'small', icon: 'weight' },
+      cucchiaino: { label: 'Cucchiaino',      short: 'cucchiaini', grams: 5,    mode: 'small', icon: 'utensils' },
+      cucchiaio:  { label: 'Cucchiaio',       short: 'cucchiai',   grams: 12,   mode: 'small', icon: 'soup' },
+      pezzo:      { label: 'Pezzo',           short: 'pz',         grams: 80,   mode: 'small', icon: 'circle-dot' },
+      fetta:      { label: 'Fetta',           short: 'fette',      grams: 30,   mode: 'small', icon: 'slice' },
+      quadretto:  { label: 'Quadretto',       short: 'quadretti',  grams: 10,   mode: 'small', icon: 'grid-2x2' },
+      manciata:   { label: 'Manciata',        short: 'manciate',   grams: 30,   mode: 'small', icon: 'hand' },
+      bicchiere:  { label: 'Bicchiere',       short: 'bicchieri',  grams: 200,  mode: 'small', icon: 'cup-soda' },
+      tazza:      { label: 'Tazza',           short: 'tazze',      grams: 240,  mode: 'small', icon: 'coffee' },
+      vasetto:    { label: 'Vasetto',         short: 'vasetti',    grams: 150,  mode: 'small', icon: 'container' },
+      scatoletta: { label: 'Scatoletta',      short: 'scatolette', grams: 80,   mode: 'small', icon: 'package' },
+      barattolo:  { label: 'Barattolo',       short: 'barattoli',  grams: 240,  mode: 'small', icon: 'package-2' },
+      vaschetta:  { label: 'Vaschetta',       short: 'vaschette',  grams: 100,  mode: 'small', icon: 'box' },
+      lattina:    { label: 'Lattina',         short: 'lattine',    grams: 400,  mode: 'small', icon: 'cylinder' },
+      porzione:   { label: 'Porzione',        short: 'porz.',      grams: 100,  mode: 'small', icon: 'utensils-crossed' }
+    };
+
+    const WHEEL_MASS_VALUES = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 75, 80, 90, 100, 110, 120, 125, 130, 140, 150, 160, 175, 180, 200, 220, 240, 250, 300, 350, 400, 450, 500, 600, 750, 1000];
+    const WHEEL_SMALL_VALUES = [0.25, 0.5, 0.75, 1, 1.5, 2, 2.5, 3, 3.5, 4, 5, 6, 7, 8, 9, 10, 12, 15, 20];
+
+    const DEFAULT_SHOPPING_LIST = [
+      { id: 'sh_1', name: 'Petto di pollo / sovracosce (700g)', price: 6.0, checked: false },
+      { id: 'sh_2', name: 'Uova fresche (conf. da 10-12)', price: 2.8, checked: false },
+      { id: 'sh_3', name: 'Macinato bovino magro / Lonza (500g)', price: 5.0, checked: false },
+      { id: 'sh_4', name: 'Sgombro o tonno in scatola (3 pz)', price: 3.5, checked: false },
+      { id: 'sh_5', name: 'Legumi in barattolo / Lenticchie rosse', price: 2.0, checked: false },
+      { id: 'sh_6', name: 'Grana Padano (150g) o Stracchino', price: 2.4, checked: false },
+      { id: 'sh_7', name: 'Pasta (1kg) + Riso o Patate', price: 2.9, checked: false },
+      { id: 'sh_8', name: 'Pane / Piadine da roll Conad', price: 2.5, checked: false },
+      { id: 'sh_9', name: 'Fiocchi / Farina d’avena (500g)', price: 1.4, checked: false },
+      { id: 'sh_10', name: 'Frutta secca mista (200g) + Fondente 80%', price: 3.7, checked: false },
+      { id: 'sh_11', name: 'Hummus di ceci + Passata pomodoro', price: 2.3, checked: false },
+      { id: 'sh_12', name: 'Banane + Mele/Arance + Verdure surgelate', price: 4.5, checked: false }
     ];
 
     const DEFAULT_RECIPES = [
-      { id: 'rec_pancake', name: 'Pancake Proteici di Giacomo', defaultMeal: 'Colazione', ingredients: [
+      { id: 'rec_pancake', name: 'Pancake Proteici di Giacomo', defaultMeal: 'Colazione', servings: 1, ingredients: [
         { foodId: 'f_avena', grams: 60 }, { foodId: 'f_albume', grams: 125 }, { foodId: 'f_uovo', grams: 60 }, { foodId: 'f_marmellata', grams: 20 }, { foodId: 'f_fondente', grams: 15 }
       ]},
-      { id: 'rec_burrito', name: 'Burrito Conad (1 roll)', defaultMeal: 'Pranzo', ingredients: [
-        { foodId: 'f_piadina', grams: 75 }, { foodId: 'f_macinato', grams: 100 }, { foodId: 'f_fagioli', grams: 60 }, { foodId: 'f_pomodoro', grams: 25 }, { foodId: 'f_grana', grams: 15 }
+      { id: 'rec_burrito', name: 'Burrito Conad (Padella da 5 roll)', defaultMeal: 'Pranzo', servings: 5, ingredients: [
+        { foodId: 'f_piadina', grams: 375 }, { foodId: 'f_macinato', grams: 500 }, { foodId: 'f_fagioli', grams: 240 }, { foodId: 'f_pomodoro', grams: 100 }, { foodId: 'f_grana', grams: 60 }
       ]},
-      { id: 'rec_ragu50', name: 'Pasta Ragù 50/50 Macinato & Lenticchie', defaultMeal: 'Pranzo', ingredients: [
+      { id: 'rec_ragu50', name: 'Pasta Ragù 50/50 Macinato & Lenticchie', defaultMeal: 'Pranzo', servings: 1, ingredients: [
         { foodId: 'f_pasta', grams: 120 }, { foodId: 'f_macinato', grams: 65 }, { foodId: 'f_lenticchie', grams: 100 }, { foodId: 'f_pomodoro', grams: 120 }, { foodId: 'f_grana', grams: 15 }, { foodId: 'f_olio', grams: 10 }
       ]},
-      { id: 'rec_pollo_riso', name: 'Riso + Pollo + Broccoli Post-WO', defaultMeal: 'Cena', ingredients: [
+      { id: 'rec_pollo_riso', name: 'Riso + Pollo + Broccoli Post-WO', defaultMeal: 'Cena', servings: 1, ingredients: [
         { foodId: 'f_riso', grams: 120 }, { foodId: 'f_pollo', grams: 180 }, { foodId: 'f_broccoli', grams: 180 }, { foodId: 'f_olio', grams: 15 }
       ]},
-      { id: 'rec_pollo_curry', name: 'Pollo al Curry Cremoso (Latte di Cocco)', defaultMeal: 'Cena', ingredients: [
+      { id: 'rec_pollo_curry', name: 'Pollo al Curry Cremoso (Latte di Cocco)', defaultMeal: 'Cena', servings: 1, ingredients: [
         { foodId: 'f_riso', grams: 115 }, { foodId: 'f_pollo', grams: 180 }, { foodId: 'f_latte_cocco', grams: 100 }, { foodId: 'f_pomodoro', grams: 20 }
       ]},
-      { id: 'rec_panino_uni', name: 'Panino Uni Pollo & Hummus', defaultMeal: 'Spuntini', ingredients: [
+      { id: 'rec_panino_uni', name: 'Panino Uni Pollo & Hummus', defaultMeal: 'Spuntini', servings: 1, ingredients: [
         { foodId: 'f_pane', grams: 100 }, { foodId: 'f_pollo', grams: 120 }, { foodId: 'f_hummus', grams: 30 }, { foodId: 'f_frutta_secca', grams: 25 }
       ]},
-      { id: 'rec_proats', name: 'Porridge Cremoso all’Albume (Proats)', defaultMeal: 'Colazione', ingredients: [
+      { id: 'rec_proats', name: 'Porridge Cremoso all’Albume (Proats)', defaultMeal: 'Colazione', servings: 1, ingredients: [
         { foodId: 'f_avena', grams: 60 }, { foodId: 'f_albume', grams: 140 }, { foodId: 'f_banana', grams: 110 }, { foodId: 'f_fondente', grams: 15 }
       ]}
     ];
@@ -1090,6 +1343,9 @@
       weightHistory: [],
       foods: [],
       recipes: [],
+      favorites: ['f_avena', 'f_uovo', 'f_pollo', 'f_olio', 'f_pasta', 'f_riso'],
+      recentFoodIds: [],
+      shoppingList: [],
       days: {}
     };
 
@@ -1121,12 +1377,20 @@
     let onlineSearchResults = [];
     let pendingPortionFood = null;
     let editingFoodEntryId = null;
+    let portionActiveUnits = [];
+    let portionSelectedUnitKey = 'g';
+    let portionCurrentQty = 100;
+    let portionWheelQtyValues = WHEEL_MASS_VALUES;
+    let qtyScrollTimer = null;
+    let unitScrollTimer = null;
+    let suppressWheelSync = false;
     let pendingBarcodeMeal = 'Spuntini';
     let html5QrScanner = null;
     let isScannerRunning = false;
     let pendingQuickRecipe = null;
     let pendingQuickRecipeIngs = [];
     let draftNewRecipeIngs = [];
+    let editingRecipeId = null;
     let stretchMode = 'full';
     let stretchTimerInterval = null;
     let stretchTimerSeconds = 60;
@@ -1319,9 +1583,14 @@
           if (Array.isArray(p.foods)) nutriState.foods = p.foods;
           if (Array.isArray(p.recipes) && p.recipes.length) nutriState.recipes = p.recipes;
           else nutriState.recipes = JSON.parse(JSON.stringify(DEFAULT_RECIPES));
+          if (Array.isArray(p.favorites)) nutriState.favorites = p.favorites;
+          if (Array.isArray(p.recentFoodIds)) nutriState.recentFoodIds = p.recentFoodIds;
+          if (Array.isArray(p.shoppingList) && p.shoppingList.length) nutriState.shoppingList = p.shoppingList;
+          else nutriState.shoppingList = JSON.parse(JSON.stringify(DEFAULT_SHOPPING_LIST));
           if (p.days && typeof p.days === 'object') nutriState.days = p.days;
         } else {
           nutriState.recipes = JSON.parse(JSON.stringify(DEFAULT_RECIPES));
+          nutriState.shoppingList = JSON.parse(JSON.stringify(DEFAULT_SHOPPING_LIST));
           nutriState.weightHistory = [{ date: toLocalDateKey(new Date()), weight: 61.0 }];
         }
         if (!nutriState.weightHistory.length) {
@@ -1329,6 +1598,7 @@
         }
       } catch (e) {
         nutriState.recipes = JSON.parse(JSON.stringify(DEFAULT_RECIPES));
+        nutriState.shoppingList = JSON.parse(JSON.stringify(DEFAULT_SHOPPING_LIST));
         nutriState.weightHistory = [{ date: toLocalDateKey(new Date()), weight: 61.0 }];
       }
     }
@@ -1453,12 +1723,14 @@
 
     function getDayData(dateKey) {
       if (!nutriState.days[dateKey]) {
-        nutriState.days[dateKey] = { waterMl: 0, entries: [], activities: [], stretchDone: [] };
+        nutriState.days[dateKey] = { waterMl: 0, entries: [], activities: [], stretchDone: [], uniHours: 0, studyHours: 0 };
       }
       const d = nutriState.days[dateKey];
       if (!Array.isArray(d.entries)) d.entries = [];
       if (!Array.isArray(d.activities)) d.activities = [];
       if (!Array.isArray(d.stretchDone)) d.stretchDone = [];
+      if (d.uniHours === undefined) d.uniHours = 0;
+      if (d.studyHours === undefined) d.studyHours = 0;
       return d;
     }
 
@@ -1470,14 +1742,14 @@
       const baseMaintenance = Math.round(bmr * (p.activityFactor || 1.32));
       const surplus = parseInt(p.surplusKcal) || 0;
       const activityItems = [];
-      let totalBurn = 0;
+      let sportBurn = 0;
 
       // 1. Sessioni IronOS salvate nella data selezionata
       state.history.forEach(sess => {
         if (toLocalDateKey(sess.date) === dateKey) {
           const est = estimateSessionBurnKcal(sess, weightKg);
           if (est.kcal > 0) {
-            totalBurn += est.kcal;
+            sportBurn += est.kcal;
             activityItems.push({
               source: 'ironos',
               name: `${est.label} (${est.minutes} min · ${sess.totalSets || 0} serie)`,
@@ -1491,7 +1763,7 @@
       if (dateKey === toLocalDateKey(new Date())) {
         const live = estimateLiveActiveWorkoutBurn(weightKg);
         if (live.kcal > 0) {
-          totalBurn += live.kcal;
+          sportBurn += live.kcal;
           activityItems.push({
             source: 'live',
             name: `${state.activeWorkout.routineName} (in corso: ${live.doneSets} serie)`,
@@ -1501,20 +1773,31 @@
       }
 
       // 3. Attività extra manuali (Basket, Corsa, Pliometria...)
-      getDayData(dateKey).activities.forEach((act, idx) => {
+      const dayObj = getDayData(dateKey);
+      dayObj.activities.forEach((act, idx) => {
         const k = Math.round(parseNum(act.kcal));
-        totalBurn += k;
+        sportBurn += k;
         activityItems.push({ source: 'manual', idx, name: act.name, kcal: k });
       });
 
+      // 4. Dispendio netto aggiuntivo da Lezioni/Università (spostamenti + campus) e Studio intenso
+      const uniHours = Math.max(0, parseNum(dayObj.uniHours) || 0);
+      const studyHours = Math.max(0, parseNum(dayObj.studyHours) || 0);
+      const uniBurn = Math.round(weightKg * 0.55 * uniHours);
+      const studyBurn = Math.round(weightKg * 0.30 * studyHours);
+      const studyTotalBurn = uniBurn + studyBurn;
+
+      const totalBurn = Math.round(sportBurn + studyTotalBurn);
       const targetKcal = Math.max(1200, Math.round(baseMaintenance + totalBurn + surplus));
       const targetProt = Math.round(weightKg * (p.proteinPerKg || 2.0));
       const targetFat = Math.round((targetKcal * (p.fatPct || 0.25)) / 9);
       const targetCarbs = Math.max(60, Math.round((targetKcal - (targetProt * 4) - (targetFat * 9)) / 4));
-      const targetWaterMl = Math.round((weightKg * 35) + (totalBurn > 0 ? 500 : 0));
+      const targetWaterMl = Math.round((weightKg * 35) + (sportBurn > 0 ? 500 : 0) + (uniHours >= 3 ? 250 : 0));
 
       return {
-        weightKg, bmr: Math.round(bmr), baseMaintenance, totalBurn: Math.round(totalBurn), surplus,
+        weightKg, bmr: Math.round(bmr), baseMaintenance,
+        sportBurn: Math.round(sportBurn), uniBurn, studyBurn, studyTotalBurn,
+        uniHours, studyHours, totalBurn, surplus,
         targetKcal, targetProt, targetFat, targetCarbs, targetWaterMl, activityItems
       };
     }
@@ -3411,8 +3694,9 @@
       document.getElementById('nutriDiaryView').classList.toggle('hidden', view !== 'diary');
       document.getElementById('nutriMicrosView').classList.toggle('hidden', view !== 'micros');
       document.getElementById('nutriRecipesView').classList.toggle('hidden', view !== 'recipes');
+      document.getElementById('nutriShopView').classList.toggle('hidden', view !== 'shop');
 
-      const map = { diary: 'nutriSubDiaryBtn', micros: 'nutriSubMicrosBtn', recipes: 'nutriSubRecipesBtn' };
+      const map = { diary: 'nutriSubDiaryBtn', micros: 'nutriSubMicrosBtn', recipes: 'nutriSubRecipesBtn', shop: 'nutriSubShopBtn' };
       Object.entries(map).forEach(([k, id]) => {
         const btn = document.getElementById(id);
         if (!btn) return;
@@ -3549,11 +3833,12 @@
       document.getElementById('yazioFormulaBreakdown').innerHTML = `
         <span>Base (${calc.weightKg.toFixed(1)}kg): <strong class="text-slate-200">${calc.baseMaintenance}</strong></span>
         <span>+</span>
-        <span>Allenamento: <strong class="text-amber-400">+${calc.totalBurn}</strong></span>
+        <span>Sport: <strong class="text-amber-400">+${calc.sportBurn}</strong></span>
+        ${calc.studyTotalBurn > 0 ? `<span>+</span><span>Uni/Studio: <strong class="text-indigo-300">+${calc.studyTotalBurn}</strong></span>` : ''}
         <span>+</span>
         <span>Massa: <strong class="text-blue-400">${calc.surplus >= 0 ? '+' : ''}${calc.surplus}</strong></span>`;
 
-      // Barre Macronutrienti
+      // Barre Macronutrienti stile Yazio
       const setMacroUI = (val, target, barId, pctId, numId) => {
         const pct = Math.round((val / Math.max(1, target)) * 100);
         document.getElementById(barId).style.width = `${Math.min(100, pct)}%`;
@@ -3563,12 +3848,23 @@
       setMacroUI(eatenC, calc.targetCarbs, 'macroCarbsBar', 'macroCarbsPct', 'macroCarbsNums');
       setMacroUI(eatenP, calc.targetProt, 'macroProtBar', 'macroProtPct', 'macroProtNums');
       setMacroUI(eatenF, calc.targetFat, 'macroFatBar', 'macroFatPct', 'macroFatNums');
+
+      // Aggiorna controlli ore Uni / Studio
+      const uniInp = document.getElementById('uniHoursInput');
+      const stuInp = document.getElementById('studyHoursInput');
+      const uniBadge = document.getElementById('uniBurnKcalBadge');
+      const stuBadge = document.getElementById('studyBurnKcalBadge');
+      if (uniInp) uniInp.value = calc.uniHours;
+      if (stuInp) stuInp.value = calc.studyHours;
+      if (uniBadge) uniBadge.textContent = `+${calc.uniBurn} kcal`;
+      if (stuBadge) stuBadge.textContent = `+${calc.studyBurn} kcal`;
       updateWeeklyAvgBanner(dateKey);
+      updateStreakAndDailyScore(dateKey, eatenKcal, eatenP, eatenMicros, dayData.waterMl || 0, calc);
 
       // Attività del giorno sincronizzate con IronOS
       const actContainer = document.getElementById('nutriDayActivitiesList');
       if (!calc.activityItems.length) {
-        actContainer.innerHTML = `<div class="text-[11px] text-slate-500 bg-slate-950/60 border border-slate-800/80 rounded-xl px-3 py-2">Giorno di riposo (0 kcal extra). Appena spunti le serie o salvi un allenamento su IronOS, il dispendio compare qui automaticamente.</div>`;
+        actContainer.innerHTML = `<div class="text-[11px] text-slate-500 bg-slate-950/60 border border-slate-800/80 rounded-xl px-3 py-2">Giorno di riposo (0 kcal sport). Appena spunti le serie o salvi un allenamento su IronOS, il dispendio compare qui automaticamente.</div>`;
       } else {
         actContainer.innerHTML = calc.activityItems.map(it => `
           <div class="flex items-center justify-between gap-2 bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-2">
@@ -3596,12 +3892,12 @@
           mP += n.p;
           return `
             <div class="flex items-center justify-between gap-2 py-2 border-t border-slate-800/70">
-              <button type="button" onclick="editFoodEntry('${e.id}')" class="min-w-0 flex-1 text-left active:opacity-80" title="Tocca per modificare grammi o pasto">
+              <button type="button" onclick="editFoodEntry('${e.id}')" class="min-w-0 flex-1 text-left active:opacity-80" title="Tocca per modificare quantità o unità">
                 <div class="text-xs font-bold text-slate-200 truncate flex items-center gap-1">
                   <span class="truncate">${e.name}</span>
                   <i data-lucide="pencil" class="w-2.5 h-2.5 text-slate-500 shrink-0"></i>
                 </div>
-                <div class="text-[10px] text-slate-400">${Math.round(e.grams)} g · C ${Math.round(n.c)}g · P ${Math.round(n.p)}g · G ${Math.round(n.f)}g</div>
+                <div class="text-[10px] text-slate-400">${e.unitDisplay ? `<span class="text-emerald-300/90 font-semibold">${e.unitDisplay}</span> (${Math.round(e.grams)}g)` : `${Math.round(e.grams)} g`} · C ${Math.round(n.c)}g · P ${Math.round(n.p)}g · G ${Math.round(n.f)}g</div>
               </button>
               <div class="flex items-center gap-2 shrink-0">
                 <span class="text-xs font-extrabold text-white">${n.kcal} kcal</span>
@@ -3640,8 +3936,186 @@
 
       if (nutritionSubView === 'micros') renderMicronutrientsPanel(eatenMicros);
       if (nutritionSubView === 'recipes') renderRecipesList();
+      if (nutritionSubView === 'shop') renderShoppingList();
 
       refreshIcons();
+    }
+
+    function updateStreakAndDailyScore(dateKey, eatenKcal, eatenP, eatenMicros, waterMl, calc) {
+      // Calcola Streak consecutiva di giorni tracciati
+      let streak = 0;
+      const p = toLocalDateKey(new Date()).split('-').map(Number);
+      for (let i = 0; i < 60; i++) {
+        const k = toLocalDateKey(new Date(p[0], p[1] - 1, p[2] - i));
+        const dObj = nutriState.days[k];
+        const hasLog = dObj && ((dObj.entries && dObj.entries.length > 0) || (dObj.waterMl || 0) >= 500);
+        if (hasLog) streak++;
+        else if (i > 0) break;
+      }
+      const streakEl = document.getElementById('nutriStreakBadge');
+      if (streakEl) streakEl.textContent = `🔥 ${streak}g`;
+
+      // Calcola Punteggio Giornata (0–100): Kcal (35) + Proteine (30) + Acqua (15) + Fibre/Micro (20)
+      const kcalRatio = eatenKcal / Math.max(1, calc.targetKcal);
+      const kcalPts = eatenKcal === 0 ? 0 : (kcalRatio <= 1.12 ? Math.min(35, Math.round(kcalRatio * 35)) : Math.max(15, Math.round(35 - (kcalRatio - 1.12) * 50)));
+      const protPts = Math.min(30, Math.round((eatenP / Math.max(1, calc.targetProt)) * 30));
+      const waterPts = Math.min(15, Math.round((waterMl / Math.max(1000, calc.targetWaterMl)) * 15));
+      const fiberPts = Math.min(20, Math.round(((eatenMicros.fiber || 0) / 25) * 20));
+      const score = Math.min(100, kcalPts + protPts + waterPts + fiberPts);
+
+      const circle = document.getElementById('dailyScoreCircle');
+      const hint = document.getElementById('dailyScoreHint');
+      if (!circle || !hint) return;
+      circle.textContent = score;
+      circle.className = score >= 80
+        ? 'w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-400/50 flex items-center justify-center text-xs font-extrabold text-emerald-300 shrink-0'
+        : score >= 45
+          ? 'w-8 h-8 rounded-xl bg-blue-500/20 border border-blue-400/40 flex items-center justify-center text-xs font-extrabold text-blue-300 shrink-0'
+          : 'w-8 h-8 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-extrabold text-slate-300 shrink-0';
+
+      if (eatenKcal === 0) hint.textContent = 'Inizia a registrare i pasti';
+      else if (score >= 85) hint.textContent = 'Giornata top per Lean Bulk!';
+      else if (eatenP < calc.targetProt * 0.75) hint.textContent = `Ti mancano ~${Math.round(calc.targetProt - eatenP)}g di proteine`;
+      else if (waterMl < calc.targetWaterMl * 0.6) hint.textContent = 'Ricordati di bere un po’ d’acqua';
+      else if (calc.targetKcal - eatenKcal > 300) hint.textContent = `Ancora ${Math.round(calc.targetKcal - eatenKcal)} kcal per il target`;
+      else hint.textContent = 'Ottimo equilibrio di macro oggi';
+    }
+
+    function removeFoodEntry(entryId) {
+      const dayObj = getDayData(selectedNutritionDateKey || toLocalDateKey(new Date()));
+      dayObj.entries = dayObj.entries.filter(e => e.id !== entryId);
+      saveNutritionData();
+      renderNutritionTab();
+      showToast('Voce rimossa dal diario');
+    }
+
+    // =========================================================================
+    // 7B. SMART COACH "COSA MANGIO ADESSO?" & LISTA DELLA SPESA BUDGET
+    // =========================================================================
+    function openSmartCoachModal() {
+      const dateKey = selectedNutritionDateKey || toLocalDateKey(new Date());
+      const calc = calculateDailyNutritionTargets(dateKey);
+      const dayData = getDayData(dateKey);
+      let eatenK = 0, eatenP = 0;
+      dayData.entries.forEach(e => { const n = computeEntryNutrients(e); eatenK += n.kcal; eatenP += n.p; });
+      const remK = Math.max(0, Math.round(calc.targetKcal - eatenK));
+      const remP = Math.max(0, Math.round(calc.targetProt - eatenP));
+
+      document.getElementById('smartCoachSubtitle').textContent = `Ti mancano ~${remK} kcal e ~${remP} g di proteine oggi`;
+      const body = document.getElementById('smartCoachBody');
+
+      // Costruisci suggerimenti mirati dalla dispensa di Giacomo
+      const suggestions = [];
+      if (remP >= 25 && remK >= 450) {
+        suggestions.push({ title: 'Panino Uni Pollo & Hummus', desc: '100g pane + 120g pollo + 30g hummus + 25g frutta secca', recipeId: 'rec_panino_uni', kcal: 615, p: 44, tag: 'Completo & Proteico' });
+        suggestions.push({ title: 'Riso + Pollo + Broccoli Post-WO', desc: '120g riso + 180g pollo + 180g broccoli + 1,5 cucchiai olio', recipeId: 'rec_pollo_riso', kcal: 785, p: 58, tag: 'Pasto Principale' });
+      }
+      if (remP >= 18) {
+        suggestions.push({ title: '1 Scatoletta di Sgombro (90g)', desc: 'Ricchissimo di proteine e Omega-3, pronto in 10 secondi', foodId: 'f_sgombro', unit: 'scatoletta', qty: 1, kcal: 167, p: 19, tag: 'Proteine + Omega-3' });
+        suggestions.push({ title: '2 Uova Intere (strapazzate / frittata)', desc: 'Economico, veloce e ricco di Vitamina D e B12', foodId: 'f_uovo', unit: 'pezzo', qty: 2, kcal: 174, p: 15, tag: 'Veloce' });
+      }
+      if (remK >= 150) {
+        suggestions.push({ title: '1 Manciata Frutta Secca (30g)', desc: 'Calorie pulite senza appesantire lo stomaco', foodId: 'f_frutta_secca', unit: 'manciata', qty: 1, kcal: 185, p: 6, tag: 'Calorie Facili' });
+        suggestions.push({ title: '1 Banana + 2 Quadretti Fondente', desc: 'Spuntino pre-palestra o post-studio perfetto', foodId: 'f_banana', unit: 'pezzo', qty: 1, kcal: 107, p: 1, tag: 'Energia Rapida' });
+      }
+      if (!suggestions.length) {
+        suggestions.push({ title: 'Sei già in target oggi!', desc: 'Hai coperto il tuo fabbisogno: concentrati su acqua e recupero.', kcal: 0, p: 0, tag: 'Obiettivo Raggiunto' });
+      }
+
+      body.innerHTML = suggestions.map((s, idx) => `
+        <div class="bg-slate-950 border border-slate-800 rounded-2xl p-3.5 space-y-2">
+          <div class="flex items-start justify-between gap-2">
+            <div>
+              <span class="text-[9px] font-bold uppercase px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">${s.tag}</span>
+              <h4 class="text-sm font-bold text-white mt-1">${s.title}</h4>
+              <p class="text-[11px] text-slate-400 mt-0.5">${s.desc}</p>
+            </div>
+            ${s.kcal > 0 ? `<div class="text-right shrink-0"><div class="text-xs font-extrabold text-white">${s.kcal} kcal</div><div class="text-[10px] font-bold text-emerald-400">${s.p}g P</div></div>` : ''}
+          </div>
+          ${(s.foodId || s.recipeId) ? `<button type="button" onclick="applyCoachSuggestion('${s.recipeId || ''}', '${s.foodId || ''}', '${s.unit || 'g'}', ${s.qty || 100})" class="w-full py-2 rounded-xl bg-emerald-600/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold active:scale-98">+ Inserisci nel Diario</button>` : ''}
+        </div>`).join('');
+      document.getElementById('smartCoachModal').classList.remove('hidden');
+      refreshIcons();
+    }
+
+    function closeSmartCoachModal() {
+      document.getElementById('smartCoachModal').classList.add('hidden');
+    }
+
+    function applyCoachSuggestion(recipeId, foodId, unitKey, qty) {
+      closeSmartCoachModal();
+      const hour = new Date().getHours();
+      const autoMeal = hour < 11 ? 'Colazione' : hour < 15 ? 'Pranzo' : hour < 19 ? 'Spuntini' : 'Cena';
+      if (recipeId) {
+        openRecipeQuickLogModal(recipeId, autoMeal);
+      } else if (foodId) {
+        const f = findFoodById(foodId);
+        if (f) openFoodPortionModal(f, autoMeal, 'Coach Smart', null, unitKey, qty);
+      }
+    }
+
+    function renderShoppingList() {
+      const cont = document.getElementById('shoppingListContainer');
+      if (!cont) return;
+      const items = nutriState.shoppingList || [];
+      const total = items.reduce((a, b) => a + parseNum(b.price), 0);
+      const checkedCost = items.filter(i => i.checked).reduce((a, b) => a + parseNum(b.price), 0);
+      const budget = 40;
+      const pct = Math.min(100, Math.round((total / budget) * 100));
+
+      document.getElementById('shopTotalCostBadge').textContent = `${total.toFixed(2).replace('.', ',')} € / 40,00 €`;
+      document.getElementById('shopTotalCostBadge').className = total > budget ? 'text-rose-400' : 'text-emerald-400';
+      document.getElementById('shopBudgetBar').style.width = `${pct}%`;
+      document.getElementById('shopBudgetBar').className = `h-full ${total > budget ? 'bg-rose-500' : 'bg-emerald-500'} rounded-full transition-all duration-300`;
+      document.getElementById('shopBudgetSub').textContent = `Nel carrello: ${checkedCost.toFixed(2).replace('.', ',')} € · ${items.filter(i => i.checked).length}/${items.length} presi`;
+
+      cont.innerHTML = items.map(item => `
+        <div class="flex items-center justify-between gap-2 p-3 rounded-2xl border transition ${item.checked ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-slate-900 border-slate-800'}">
+          <button type="button" onclick="toggleShopItem('${item.id}')" class="flex items-center gap-2.5 min-w-0 flex-1 text-left">
+            <div class="w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${item.checked ? 'bg-emerald-500 text-slate-950' : 'bg-slate-950 border border-slate-700 text-transparent'}">
+              <i data-lucide="check" class="w-3.5 h-3.5 stroke-[3]"></i>
+            </div>
+            <span class="text-xs font-bold truncate ${item.checked ? 'text-emerald-300 line-through' : 'text-white'}">${item.name}</span>
+          </button>
+          <div class="flex items-center gap-2 shrink-0">
+            <span class="text-xs font-mono font-bold text-slate-300">${parseNum(item.price).toFixed(2).replace('.', ',')} €</span>
+            <button type="button" onclick="removeShopItem('${item.id}')" class="p-1 text-slate-500 hover:text-rose-400"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+          </div>
+        </div>`).join('');
+      refreshIcons();
+    }
+
+    function toggleShopItem(id) {
+      const it = (nutriState.shoppingList || []).find(x => x.id === id);
+      if (!it) return;
+      it.checked = !it.checked;
+      saveNutritionData();
+      renderShoppingList();
+    }
+
+    function addShopItem() {
+      const name = (document.getElementById('newShopItemName').value || '').trim();
+      const price = Math.max(0, parseNum(document.getElementById('newShopItemPrice').value));
+      if (!name) { showToast('Scrivi il nome del prodotto', true); return; }
+      nutriState.shoppingList.unshift({ id: 'sh_' + Date.now(), name, price, checked: false });
+      document.getElementById('newShopItemName').value = '';
+      document.getElementById('newShopItemPrice').value = '';
+      saveNutritionData();
+      renderShoppingList();
+      showToast('Aggiunto alla lista della spesa!');
+    }
+
+    function removeShopItem(id) {
+      nutriState.shoppingList = (nutriState.shoppingList || []).filter(x => x.id !== id);
+      saveNutritionData();
+      renderShoppingList();
+    }
+
+    function resetShopChecks() {
+      (nutriState.shoppingList || []).forEach(x => { x.checked = false; });
+      saveNutritionData();
+      renderShoppingList();
+      showToast('Spunte carrello azzerate!');
     }
 
     function addWater(deltaMl) {
@@ -3651,12 +4125,32 @@
       renderNutritionTab();
     }
 
-    function removeFoodEntry(entryId) {
+    function applyCustomWater(mode) {
+      const inp = document.getElementById('customWaterMlInput');
+      const ml = Math.round(parseNum(inp ? inp.value : 0));
+      if (mode === 'add' && ml <= 0) { showToast('Inserisci i millilitri da aggiungere (es. 330)', true); return; }
+      if (mode === 'set' && ml < 0) { showToast('Inserisci un valore valido in ml', true); return; }
       const dayObj = getDayData(selectedNutritionDateKey || toLocalDateKey(new Date()));
-      dayObj.entries = dayObj.entries.filter(e => e.id !== entryId);
+      dayObj.waterMl = mode === 'set' ? ml : Math.max(0, (dayObj.waterMl || 0) + ml);
+      if (inp) inp.value = '';
       saveNutritionData();
       renderNutritionTab();
-      showToast('Voce rimossa dal diario');
+      showToast(mode === 'set' ? `Idratazione impostata a ${ml} ml` : `+${ml} ml di acqua aggiunti!`);
+    }
+
+    function adjustStudyUniHours(field, delta) {
+      const dayObj = getDayData(selectedNutritionDateKey || toLocalDateKey(new Date()));
+      const next = Math.max(0, Math.min(16, +((parseNum(dayObj[field]) || 0) + delta).toFixed(1)));
+      dayObj[field] = next;
+      saveNutritionData();
+      renderNutritionTab();
+    }
+
+    function setStudyUniHours(field, val) {
+      const dayObj = getDayData(selectedNutritionDateKey || toLocalDateKey(new Date()));
+      dayObj[field] = Math.max(0, Math.min(16, +(parseNum(val) || 0).toFixed(1)));
+      saveNutritionData();
+      renderNutritionTab();
     }
 
     function removeManualActivity(idx) {
@@ -3743,12 +4237,13 @@
         const recs = nutriState.recipes.filter(r => !q || r.name.toLowerCase().includes(q));
         if (!recs.length) { body.innerHTML = `<p class="text-xs text-slate-500 text-center py-6">Nessuna ricetta trovata.</p>`; return; }
         body.innerHTML = recs.map(r => {
-          const tot = calcRecipeTotals(r.ingredients, 1);
+          const servings = Math.max(0.5, parseNum(r.servings) || 1);
+          const tot = calcRecipeTotals(r.ingredients, 1 / servings);
           return `
             <button type="button" onclick="openRecipeQuickLogModal('${r.id}', '${meal}')" class="w-full text-left p-3 rounded-2xl bg-slate-950 border border-slate-800 hover:border-emerald-500/50 flex items-center justify-between gap-2">
               <div class="min-w-0">
                 <div class="text-sm font-bold text-white truncate">${r.name}</div>
-                <div class="text-[11px] text-slate-400">${r.ingredients.length} ingredienti · C ${Math.round(tot.c)}g · P ${Math.round(tot.p)}g · G ${Math.round(tot.f)}g</div>
+                <div class="text-[11px] text-slate-400">${servings > 1 ? `1/${servings} porz · ` : ''}${r.ingredients.length} ing. · C ${Math.round(tot.c)}g · P ${Math.round(tot.p)}g · G ${Math.round(tot.f)}g</div>
               </div>
               <span class="text-xs font-extrabold text-emerald-400 shrink-0">${Math.round(tot.kcal)} kcal</span>
             </button>`;
@@ -3757,6 +4252,24 @@
       }
 
       const localList = getAllFoods().filter(f => !q || f.name.toLowerCase().includes(q) || (f.brand || '').toLowerCase().includes(q));
+      const favIds = nutriState.favorites || [];
+      const recentIds = nutriState.recentFoodIds || [];
+
+      const renderFoodRow = (f) => {
+        const isFav = favIds.includes(f.id);
+        return `
+          <div class="w-full p-2.5 rounded-2xl bg-slate-950/90 border border-slate-800 hover:border-emerald-500/50 flex items-center justify-between gap-2">
+            <button type="button" onclick="toggleFavoriteFood('${f.id}', event)" class="p-1.5 rounded-lg shrink-0 ${isFav ? 'text-amber-400' : 'text-slate-600 hover:text-slate-400'}" title="Preferito">
+              <i data-lucide="star" class="w-4 h-4 ${isFav ? 'fill-amber-400' : ''}"></i>
+            </button>
+            <button type="button" onclick="selectLocalFoodForPortion('${f.id}')" class="min-w-0 flex-1 text-left">
+              <div class="text-sm font-bold text-white truncate">${f.name}</div>
+              <div class="text-[11px] text-slate-400 truncate">${f.brand || 'Dispensa'} · 100g: C ${Math.round(f.c)}g · P ${Math.round(f.p)}g · G ${Math.round(f.f)}g</div>
+            </button>
+            <button type="button" onclick="selectLocalFoodForPortion('${f.id}')" class="text-xs font-extrabold text-emerald-400 shrink-0 pl-1">${Math.round(f.kcal)} kcal</button>
+          </div>`;
+      };
+
       let html = '';
       if (onlineSearchResults.length) {
         html += `<div class="text-[10px] font-bold uppercase tracking-wider text-blue-400 px-1">Risultati Online (Open Food Facts)</div>`;
@@ -3769,16 +4282,45 @@
             <span class="text-xs font-extrabold text-blue-300 shrink-0">${Math.round(f.kcal)} kcal</span>
           </button>`).join('');
       }
-      html += `<div class="text-[10px] font-bold uppercase tracking-wider text-emerald-400 px-1 pt-1">Dispensa Locale (${localList.length})</div>`;
-      html += localList.length ? localList.map(f => `
-        <button type="button" onclick="selectLocalFoodForPortion('${f.id}')" class="w-full text-left p-3 rounded-2xl bg-slate-950/90 border border-slate-800 hover:border-emerald-500/50 flex items-center justify-between gap-2">
-          <div class="min-w-0">
-            <div class="text-sm font-bold text-white truncate">${f.name}</div>
-            <div class="text-[11px] text-slate-400 truncate">${f.brand || 'Dispensa'} · 100g: C ${Math.round(f.c)}g · P ${Math.round(f.p)}g · G ${Math.round(f.f)}g</div>
-          </div>
-          <span class="text-xs font-extrabold text-emerald-400 shrink-0">${Math.round(f.kcal)} kcal</span>
-        </button>`).join('') : `<p class="text-xs text-slate-500 text-center py-4">Nessun alimento locale. Premi "Online" per cercarlo su Open Food Facts!</p>`;
+
+      // Se non c'è una ricerca attiva, mostra Recenti e Preferiti in cima stile Yazio
+      if (!q && recentIds.length) {
+        const recFoods = recentIds.map(id => findFoodById(id)).filter(Boolean).slice(0, 4);
+        if (recFoods.length) {
+          html += `<div class="text-[10px] font-bold uppercase tracking-wider text-indigo-300 px-1 pt-1">Usati di Recente</div>`;
+          html += recFoods.map(renderFoodRow).join('');
+        }
+      }
+
+      const favFoods = localList.filter(f => favIds.includes(f.id));
+      const otherFoods = localList.filter(f => !favIds.includes(f.id));
+
+      if (favFoods.length) {
+        html += `<div class="text-[10px] font-bold uppercase tracking-wider text-amber-400 px-1 pt-1">⭐ Preferiti (${favFoods.length})</div>`;
+        html += favFoods.map(renderFoodRow).join('');
+      }
+
+      html += `<div class="text-[10px] font-bold uppercase tracking-wider text-emerald-400 px-1 pt-1">Dispensa Locale (${otherFoods.length})</div>`;
+      html += otherFoods.length
+        ? otherFoods.map(renderFoodRow).join('')
+        : (!favFoods.length ? `<p class="text-xs text-slate-500 text-center py-4">Nessun alimento locale. Premi "Online" per cercarlo su Open Food Facts!</p>` : '');
       body.innerHTML = html;
+      refreshIcons();
+    }
+
+    function toggleFavoriteFood(foodId, event) {
+      if (event) event.stopPropagation();
+      if (!Array.isArray(nutriState.favorites)) nutriState.favorites = [];
+      const idx = nutriState.favorites.indexOf(foodId);
+      if (idx === -1) nutriState.favorites.push(foodId);
+      else nutriState.favorites.splice(idx, 1);
+      saveNutritionData();
+      renderFoodLoggerList();
+    }
+
+    function registerRecentFood(foodId) {
+      if (!Array.isArray(nutriState.recentFoodIds)) nutriState.recentFoodIds = [];
+      nutriState.recentFoodIds = [foodId, ...nutriState.recentFoodIds.filter(id => id !== foodId)].slice(0, 8);
     }
 
     function createAndSelectCustomFood() {
@@ -3788,7 +4330,11 @@
       const c = parseNum(document.getElementById('cfCarbs').value);
       const f = parseNum(document.getElementById('cfFat').value);
       if (!name) { showToast('Inserisci il nome dell’alimento', true); return; }
-      const newFood = { id: 'f_cust_' + Date.now(), name, brand: 'Personale', kcal: kcal || Math.round(c * 4 + p * 4 + f * 9), c, p, f, m: {} };
+      const newFood = {
+        id: 'f_cust_' + Date.now(), name, brand: 'Personale',
+        kcal: kcal || Math.round(c * 4 + p * 4 + f * 9), c, p, f,
+        defaultUnit: 'g', units: {}, m: {}
+      };
       nutriState.foods.unshift(newFood);
       saveNutritionData();
       openFoodPortionModal(newFood, document.getElementById('loggerMealSelect').value, 'Personale');
@@ -3806,6 +4352,39 @@
       openFoodPortionModal(f, document.getElementById('loggerMealSelect').value, 'Open Food Facts');
     }
 
+    // =========================================================================
+    // 8B. SELETTORE A DOPPIA ROTELLA STILE YAZIO (UNITÀ DI MISURA + QUANTITÀ)
+    // =========================================================================
+    function buildUnitsForFood(foodObj) {
+      const list = [];
+      const added = new Set();
+      const pushUnit = (key, customGrams) => {
+        if (added.has(key)) return;
+        const meta = UNIT_CATALOG[key] || { label: key, short: key, grams: customGrams || 100, mode: 'small', icon: 'scale' };
+        list.push({
+          key,
+          label: meta.label,
+          short: meta.short,
+          grams: customGrams || meta.grams,
+          mode: meta.mode,
+          icon: meta.icon
+        });
+        added.add(key);
+      };
+
+      // 1. Prima le unità specifiche dell'alimento (es. cucchiaio, cucchiaino, pezzo, scatoletta...)
+      if (foodObj && foodObj.units) {
+        Object.entries(foodObj.units).forEach(([k, g]) => pushUnit(k, g));
+      }
+      // 2. Poi sempre tutte le misure principali stile Yazio: g, ml, kg, cucchiaino, cucchiaio, tazza, bicchiere, porzione
+      ['g', 'ml', 'kg', 'cucchiaino', 'cucchiaio', 'pezzo', 'fetta', 'manciata', 'bicchiere', 'tazza', 'porzione'].forEach(k => pushUnit(k));
+      return list;
+    }
+
+    function getActiveUnitObj() {
+      return portionActiveUnits.find(u => u.key === portionSelectedUnitKey) || portionActiveUnits[0] || { key: 'g', label: 'Grammi (g)', short: 'g', grams: 1, mode: 'mass', icon: 'scale' };
+    }
+
     function editFoodEntry(entryId) {
       const dayObj = getDayData(selectedNutritionDateKey || toLocalDateKey(new Date()));
       const entry = dayObj.entries.find(e => e.id === entryId);
@@ -3813,21 +4392,40 @@
       const foodObj = entry.snapshot || findFoodById(entry.foodId);
       if (!foodObj) return;
       editingFoodEntryId = entryId;
-      openFoodPortionModal(foodObj, entry.meal, 'Modifica Voce', entry.grams);
+      openFoodPortionModal(foodObj, entry.meal, 'Modifica Voce', entry.grams, entry.unitKey || 'g', entry.unitQty || entry.grams);
     }
 
-    function openFoodPortionModal(foodObj, defaultMeal, sourceLabel, initialGrams = 100) {
+    function openFoodPortionModal(foodObj, defaultMeal, sourceLabel, initialGrams = null, preferredUnitKey = null, preferredQty = null) {
       pendingPortionFood = foodObj;
       if (sourceLabel !== 'Modifica Voce') editingFoodEntryId = null;
+
+      portionActiveUnits = buildUnitsForFood(foodObj);
+      const defUnit = preferredUnitKey && portionActiveUnits.some(u => u.key === preferredUnitKey)
+        ? preferredUnitKey
+        : (foodObj.defaultUnit && portionActiveUnits.some(u => u.key === foodObj.defaultUnit) ? foodObj.defaultUnit : 'g');
+      portionSelectedUnitKey = defUnit;
+      const uObj = getActiveUnitObj();
+
+      if (preferredQty !== null && preferredQty !== undefined) {
+        portionCurrentQty = parseNum(preferredQty) || 1;
+      } else if (initialGrams !== null && initialGrams !== undefined) {
+        portionCurrentQty = +(parseNum(initialGrams) / Math.max(0.01, uObj.grams)).toFixed(2);
+      } else {
+        portionCurrentQty = uObj.mode === 'mass' ? 100 : 1;
+      }
+
       document.getElementById('portionSourceBadge').textContent = sourceLabel || 'Dispensa';
       document.getElementById('portionFoodName').textContent = foodObj.name;
       document.getElementById('portionFoodBrand').textContent = `${foodObj.brand || ''} · ${Math.round(foodObj.kcal)} kcal / 100g`;
-      document.getElementById('portionGramsInput').value = Math.round(parseNum(initialGrams)) || 100;
       document.getElementById('portionMealSelect').value = defaultMeal || 'Pranzo';
       const lbl = document.getElementById('portionConfirmBtnLabel');
       if (lbl) lbl.textContent = editingFoodEntryId ? 'Aggiorna Quantità' : 'Aggiungi al Pasto';
-      updateFoodPortionPreview();
+
       document.getElementById('foodPortionModal').classList.remove('hidden');
+      renderPortionUnitWheel();
+      renderPortionQtyWheel();
+      renderPortionQuickChips();
+      updateFoodPortionPreview();
       refreshIcons();
     }
 
@@ -3837,14 +4435,148 @@
       editingFoodEntryId = null;
     }
 
-    function setQuickPortionGrams(g) {
-      document.getElementById('portionGramsInput').value = g;
+    function renderPortionUnitWheel() {
+      const el = document.getElementById('portionUnitWheel');
+      if (!el) return;
+      el.innerHTML = portionActiveUnits.map((u, idx) => `
+        <div class="yazio-wheel-item px-2 ${u.key === portionSelectedUnitKey ? 'active' : ''}" onclick="selectPortionUnitByIdx(${idx})">
+          <i data-lucide="${u.icon}" class="w-3.5 h-3.5 text-emerald-400 shrink-0"></i>
+          <span class="truncate">${u.label}</span>
+        </div>`).join('');
+      const activeIdx = Math.max(0, portionActiveUnits.findIndex(u => u.key === portionSelectedUnitKey));
+      suppressWheelSync = true;
+      el.scrollTop = activeIdx * 40;
+      setTimeout(() => { suppressWheelSync = false; }, 120);
+      refreshIcons();
+    }
+
+    function renderPortionQtyWheel() {
+      const el = document.getElementById('portionQtyWheel');
+      if (!el) return;
+      const uObj = getActiveUnitObj();
+      const baseList = uObj.mode === 'mass' ? [...WHEEL_MASS_VALUES] : [...WHEEL_SMALL_VALUES];
+      if (!baseList.includes(portionCurrentQty) && portionCurrentQty > 0) {
+        baseList.push(portionCurrentQty);
+        baseList.sort((a, b) => a - b);
+      }
+      portionWheelQtyValues = baseList;
+
+      el.innerHTML = portionWheelQtyValues.map((val, idx) => `
+        <div class="yazio-wheel-item font-mono ${val === portionCurrentQty ? 'active' : ''}" onclick="selectPortionQtyByIdx(${idx})">
+          ${val}
+        </div>`).join('');
+
+      const activeIdx = Math.max(0, portionWheelQtyValues.indexOf(portionCurrentQty));
+      suppressWheelSync = true;
+      el.scrollTop = activeIdx * 40;
+      setTimeout(() => { suppressWheelSync = false; }, 120);
+    }
+
+    function selectPortionUnitByIdx(idx) {
+      const u = portionActiveUnits[idx];
+      if (!u) return;
+      const prevMode = getActiveUnitObj().mode;
+      portionSelectedUnitKey = u.key;
+      if (u.mode !== prevMode) {
+        portionCurrentQty = u.mode === 'mass' ? 100 : 1;
+      }
+      const wheel = document.getElementById('portionUnitWheel');
+      suppressWheelSync = true;
+      wheel.scrollTo({ top: idx * 40, behavior: 'smooth' });
+      Array.from(wheel.children).forEach((c, i) => c.classList.toggle('active', i === idx));
+      setTimeout(() => { suppressWheelSync = false; }, 220);
+
+      renderPortionQtyWheel();
+      renderPortionQuickChips();
       updateFoodPortionPreview();
     }
 
-    function updateFoodPortionPreview() {
+    function selectPortionQtyByIdx(idx) {
+      const val = portionWheelQtyValues[idx];
+      if (val === undefined) return;
+      portionCurrentQty = val;
+      const wheel = document.getElementById('portionQtyWheel');
+      suppressWheelSync = true;
+      wheel.scrollTo({ top: idx * 40, behavior: 'smooth' });
+      Array.from(wheel.children).forEach((c, i) => c.classList.toggle('active', i === idx));
+      setTimeout(() => { suppressWheelSync = false; }, 220);
+      updateFoodPortionPreview();
+    }
+
+    function onQtyWheelScroll() {
+      if (suppressWheelSync) return;
+      const el = document.getElementById('portionQtyWheel');
+      const idx = Math.max(0, Math.min(portionWheelQtyValues.length - 1, Math.round(el.scrollTop / 40)));
+      Array.from(el.children).forEach((c, i) => c.classList.toggle('active', i === idx));
+      portionCurrentQty = portionWheelQtyValues[idx];
+      updateFoodPortionPreview();
+      clearTimeout(qtyScrollTimer);
+      qtyScrollTimer = setTimeout(() => {
+        suppressWheelSync = true;
+        el.scrollTo({ top: idx * 40, behavior: 'smooth' });
+        setTimeout(() => { suppressWheelSync = false; }, 150);
+      }, 90);
+    }
+
+    function onUnitWheelScroll() {
+      if (suppressWheelSync) return;
+      const el = document.getElementById('portionUnitWheel');
+      const idx = Math.max(0, Math.min(portionActiveUnits.length - 1, Math.round(el.scrollTop / 40)));
+      Array.from(el.children).forEach((c, i) => c.classList.toggle('active', i === idx));
+      clearTimeout(unitScrollTimer);
+      unitScrollTimer = setTimeout(() => {
+        const nextUnit = portionActiveUnits[idx];
+        if (!nextUnit || nextUnit.key === portionSelectedUnitKey) return;
+        const prevMode = getActiveUnitObj().mode;
+        portionSelectedUnitKey = nextUnit.key;
+        if (nextUnit.mode !== prevMode) {
+          portionCurrentQty = nextUnit.mode === 'mass' ? 100 : 1;
+        }
+        renderPortionQtyWheel();
+        renderPortionQuickChips();
+        updateFoodPortionPreview();
+      }, 110);
+    }
+
+    function onPortionQtyTyped(val) {
+      const n = parseNum(val);
+      if (n <= 0) return;
+      portionCurrentQty = n;
+      updateFoodPortionPreview(true);
+    }
+
+    function renderPortionQuickChips() {
+      const cont = document.getElementById('portionQuickChips');
+      if (!cont) return;
+      const uObj = getActiveUnitObj();
+      const presets = uObj.mode === 'mass' ? [20, 30, 50, 80, 100, 150, 200] : [0.5, 1, 1.5, 2, 3, 4];
+      cont.innerHTML = presets.map(v => `
+        <button type="button" onclick="setQuickPortionQty(${v})" class="px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 hover:border-emerald-500/50 text-xs font-semibold text-slate-300 shrink-0 active:scale-95">
+          ${v} ${uObj.short}
+        </button>`).join('');
+    }
+
+    function setQuickPortionQty(q) {
+      portionCurrentQty = q;
+      renderPortionQtyWheel();
+      updateFoodPortionPreview();
+    }
+
+    function updateFoodPortionPreview(skipInputUpdate = false) {
       if (!pendingPortionFood) return;
-      const factor = (parseNum(document.getElementById('portionGramsInput').value) || 0) / 100;
+      const uObj = getActiveUnitObj();
+      const totalGrams = +(portionCurrentQty * uObj.grams).toFixed(1);
+      const factor = totalGrams / 100;
+
+      if (!skipInputUpdate) {
+        const inp = document.getElementById('portionQtyInput');
+        if (inp) inp.value = portionCurrentQty;
+      }
+      const pill = document.getElementById('portionActiveUnitPill');
+      if (pill) pill.textContent = uObj.short;
+      const eq = document.getElementById('portionGramsEqBadge');
+      if (eq) eq.textContent = `= ${Math.round(totalGrams)} g`;
+
       document.getElementById('prevPortionKcal').textContent = Math.round(pendingPortionFood.kcal * factor);
       document.getElementById('prevPortionCarbs').textContent = `${Math.round(pendingPortionFood.c * factor)}g`;
       document.getElementById('prevPortionProt').textContent = `${Math.round(pendingPortionFood.p * factor)}g`;
@@ -3853,9 +4585,12 @@
 
     function confirmLogFoodPortion() {
       if (!pendingPortionFood) return;
-      const grams = parseNum(document.getElementById('portionGramsInput').value);
+      const uObj = getActiveUnitObj();
+      const qty = parseNum(document.getElementById('portionQtyInput').value);
+      const grams = +(qty * uObj.grams).toFixed(1);
       if (grams <= 0) { showToast('Inserisci una quantità valida', true); return; }
       const meal = document.getElementById('portionMealSelect').value;
+      const unitDisplay = uObj.key === 'g' ? '' : `${qty} ${uObj.short}`;
       const dayObj = getDayData(selectedNutritionDateKey || toLocalDateKey(new Date()));
 
       if (editingFoodEntryId) {
@@ -3863,6 +4598,9 @@
         if (existing) {
           existing.grams = grams;
           existing.meal = meal;
+          existing.unitKey = uObj.key;
+          existing.unitQty = qty;
+          existing.unitDisplay = unitDisplay;
         }
         saveNutritionData();
         closeFoodPortionModal();
@@ -3873,9 +4611,11 @@
 
       dayObj.entries.push({
         id: 'ent_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-        meal, foodId: pendingPortionFood.id, name: pendingPortionFood.name, grams,
+        meal, foodId: pendingPortionFood.id, name: pendingPortionFood.name,
+        grams, unitKey: uObj.key, unitQty: qty, unitDisplay,
         snapshot: JSON.parse(JSON.stringify(pendingPortionFood))
       });
+      registerRecentFood(pendingPortionFood.id);
       saveNutritionData();
       closeFoodPortionModal();
       closeFoodLoggerModal();
@@ -3911,13 +4651,15 @@
       const p = +parseNum(n.proteins_100g).toFixed(1);
       const f = +parseNum(n.fat_100g).toFixed(1);
       const sodiumMg = n.sodium_100g ? Math.round(parseNum(n.sodium_100g) * 1000) : Math.round(parseNum(n.salt_100g) * 400);
+      const servingG = parseNum(prod.serving_quantity);
+      const units = servingG > 0 ? { porzione: Math.round(servingG) } : {};
       return {
         id: 'off_' + (code || prod.code || Date.now()),
         barcode: String(code || prod.code || ''),
         name: (prod.product_name_it || prod.product_name || 'Prodotto Scansionato').trim(),
         brand: (prod.brands || 'Open Food Facts').split(',')[0].trim(),
         kcal: kcal || Math.round(c * 4 + p * 4 + f * 9),
-        c, p, f,
+        c, p, f, units,
         m: {
           fiber: +parseNum(n.fiber_100g).toFixed(1),
           vitC: extractOffMg(n, 'vitamin-c', 5),
@@ -3941,7 +4683,7 @@
       const btn = document.getElementById('offSearchBtn');
       btn.textContent = '...'; btn.disabled = true;
       try {
-        const res = await fetch(`https://it.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=10&fields=code,product_name,product_name_it,brands,nutriments`);
+        const res = await fetch(`https://it.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=10&fields=code,product_name,product_name_it,brands,serving_quantity,nutriments`);
         const data = await res.json();
         onlineSearchResults = (data.products || []).filter(pr => pr.product_name || pr.product_name_it).map(pr => mapOpenFoodFactsProduct(pr, pr.code));
         loggerTab = 'foods';
@@ -3982,10 +4724,8 @@
       }
       try {
         await stopBarcodeCamera();
-        const ph = document.getElementById('barcodeCameraPlaceholder');
-        const readerEl = document.getElementById('barcodeReader');
-        if (ph) ph.classList.add('hidden');
-        if (readerEl) readerEl.classList.remove('hidden');
+        document.getElementById('barcodeCameraPlaceholder').classList.add('hidden');
+        document.getElementById('barcodeReader').classList.remove('hidden');
         document.getElementById('startCamBtn').classList.add('hidden');
         document.getElementById('stopCamBtn').classList.remove('hidden');
         statusBox.classList.add('hidden');
@@ -4004,10 +4744,8 @@
         );
         isScannerRunning = true;
       } catch (err) {
-        const ph = document.getElementById('barcodeCameraPlaceholder');
-        const readerEl = document.getElementById('barcodeReader');
-        if (ph) ph.classList.remove('hidden');
-        if (readerEl) readerEl.classList.add('hidden');
+        document.getElementById('barcodeCameraPlaceholder').classList.remove('hidden');
+        document.getElementById('barcodeReader').classList.add('hidden');
         document.getElementById('startCamBtn').classList.remove('hidden');
         document.getElementById('stopCamBtn').classList.add('hidden');
         statusBox.textContent = 'Fotocamera non disponibile in questo contesto (serve HTTPS o permesso camera). Digita pure il codice EAN manualmente!';
@@ -4023,11 +4761,11 @@
       isScannerRunning = false;
       html5QrScanner = null;
       const ph = document.getElementById('barcodeCameraPlaceholder');
-      const readerEl = document.getElementById('barcodeReader');
+      const reader = document.getElementById('barcodeReader');
       const startB = document.getElementById('startCamBtn');
       const stopB = document.getElementById('stopCamBtn');
       if (ph) ph.classList.remove('hidden');
-      if (readerEl) readerEl.classList.add('hidden');
+      if (reader) reader.classList.add('hidden');
       if (startB) startB.classList.remove('hidden');
       if (stopB) stopB.classList.add('hidden');
     }
@@ -4047,7 +4785,7 @@
       statusBox.textContent = `Ricerca codice ${code} su Open Food Facts...`;
       statusBox.classList.remove('hidden');
       try {
-        const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${code}.json?fields=code,product_name,product_name_it,brands,nutriments`);
+        const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${code}.json?fields=code,product_name,product_name_it,brands,serving_quantity,nutriments`);
         const data = await res.json();
         if (data && data.status === 1 && data.product) {
           const mapped = mapOpenFoodFactsProduct(data.product, code);
@@ -4065,7 +4803,7 @@
     }
 
     // =========================================================================
-    // 10. RICETTE & MEAL PREP (CON SCALA RAPIDA GRAMMI AL VOLO)
+    // 10. RICETTE & MEAL PREP (MODIFICA COMPLETA + SCALA GRAMMI & PORZIONI)
     // =========================================================================
     function calcRecipeTotals(ingredients, mult = 1) {
       let kcal = 0, c = 0, p = 0, f = 0;
@@ -4086,24 +4824,29 @@
         return;
       }
       cont.innerHTML = nutriState.recipes.map(r => {
-        const tot = calcRecipeTotals(r.ingredients, 1);
+        const servings = Math.max(0.5, parseNum(r.servings) || 1);
+        const totPerServing = calcRecipeTotals(r.ingredients, 1 / servings);
         const ingNames = r.ingredients.map(i => { const f = findFoodById(i.foodId); return f ? `${f.name.split('(')[0].trim()} ${i.grams}g` : ''; }).filter(Boolean).join(' · ');
         return `
           <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 space-y-2.5">
             <div class="flex items-start justify-between gap-2">
               <div class="min-w-0">
-                <div class="flex items-center gap-1.5">
+                <div class="flex items-center gap-1.5 flex-wrap">
                   <span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">${r.defaultMeal || 'Pranzo'}</span>
-                  <span class="text-xs font-extrabold text-white">${Math.round(tot.kcal)} kcal</span>
+                  ${servings > 1 ? `<span class="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-500/15 text-indigo-300 border border-indigo-500/30">${servings} porz.</span>` : ''}
+                  <span class="text-xs font-extrabold text-white">${Math.round(totPerServing.kcal)} kcal${servings > 1 ? '/porz' : ''}</span>
                 </div>
                 <h4 class="text-sm font-bold text-white mt-1 truncate">${r.name}</h4>
                 <p class="text-[11px] text-slate-400 mt-0.5 line-clamp-2">${ingNames}</p>
               </div>
-              <button type="button" onclick="deleteRecipe('${r.id}')" class="p-1.5 text-slate-500 hover:text-rose-400 shrink-0"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+              <div class="flex items-center gap-1 shrink-0">
+                <button type="button" onclick="openRecipeEditorModal('${r.id}')" class="p-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-blue-400" title="Modifica ricetta e grammi"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button>
+                <button type="button" onclick="deleteRecipe('${r.id}')" class="p-1.5 text-slate-500 hover:text-rose-400" title="Elimina ricetta"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+              </div>
             </div>
             <div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-800/70">
-              <div class="text-[11px] font-semibold text-slate-300">C <span class="text-blue-400">${Math.round(tot.c)}g</span> · P <span class="text-emerald-400">${Math.round(tot.p)}g</span> · G <span class="text-amber-400">${Math.round(tot.f)}g</span></div>
-              <button type="button" onclick="openRecipeQuickLogModal('${r.id}')" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold active:scale-95">+ Aggiungi</button>
+              <div class="text-[11px] font-semibold text-slate-300">C <span class="text-blue-400">${Math.round(totPerServing.c)}g</span> · P <span class="text-emerald-400">${Math.round(totPerServing.p)}g</span> · G <span class="text-amber-400">${Math.round(totPerServing.f)}g</span></div>
+              <button type="button" onclick="openRecipeQuickLogModal('${r.id}')" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold active:scale-95">Adatta &amp; Aggiungi</button>
             </div>
           </div>`;
       }).join('');
@@ -4117,7 +4860,10 @@
       pendingQuickRecipeIngs = JSON.parse(JSON.stringify(rec.ingredients));
       document.getElementById('recipeLogTitle').textContent = rec.name;
       document.getElementById('recipeLogMealSelect').value = overrideMeal || rec.defaultMeal || 'Pranzo';
-      document.getElementById('recipeLogMultiplier').value = 1;
+      document.getElementById('recipeLogTotalServings').value = Math.max(0.5, parseNum(rec.servings) || 1);
+      document.getElementById('recipeLogEatenServings').value = 1;
+      const addSel = document.getElementById('quickLogAddFoodSelect');
+      if (addSel) addSel.innerHTML = getAllFoods().map(f => `<option value="${f.id}">${f.name}</option>`).join('');
       renderQuickRecipeIngredients();
       updateRecipeQuickLogTotals();
       document.getElementById('recipeQuickLogModal').classList.remove('hidden');
@@ -4136,12 +4882,28 @@
         return `
           <div class="flex items-center justify-between gap-2 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2">
             <span class="text-xs font-semibold text-slate-200 truncate flex-1">${food ? food.name : 'Alimento'}</span>
-            <div class="flex items-center gap-1 shrink-0">
-              <input type="number" value="${ing.grams}" oninput="updateQuickRecipeIngGrams(${idx}, this.value)" class="w-16 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs font-bold text-center text-white" />
+            <div class="flex items-center gap-1.5 shrink-0">
+              <input type="number" inputmode="decimal" value="${ing.grams}" oninput="updateQuickRecipeIngGrams(${idx}, this.value)" class="w-16 bg-slate-900 border border-emerald-500/40 rounded-lg px-2 py-1 text-xs font-bold text-center text-white focus:outline-none focus:border-emerald-400" />
               <span class="text-[10px] text-slate-400">g</span>
+              <button type="button" onclick="removeQuickRecipeIng(${idx})" class="text-slate-500 hover:text-rose-400 pl-1 text-xs font-bold" title="Rimuovi per oggi">✕</button>
             </div>
           </div>`;
       }).join('');
+    }
+
+    function addIngredientToQuickLog() {
+      const sel = document.getElementById('quickLogAddFoodSelect');
+      const grams = Math.max(1, parseNum(document.getElementById('quickLogAddGramsInput').value) || 50);
+      if (!sel || !sel.value) return;
+      pendingQuickRecipeIngs.push({ foodId: sel.value, grams });
+      renderQuickRecipeIngredients();
+      updateRecipeQuickLogTotals();
+    }
+
+    function removeQuickRecipeIng(idx) {
+      pendingQuickRecipeIngs.splice(idx, 1);
+      renderQuickRecipeIngredients();
+      updateRecipeQuickLogTotals();
     }
 
     function updateQuickRecipeIngGrams(idx, val) {
@@ -4150,26 +4912,38 @@
     }
 
     function updateRecipeQuickLogTotals() {
-      const mult = Math.max(0.25, parseNum(document.getElementById('recipeLogMultiplier').value) || 1);
-      const tot = calcRecipeTotals(pendingQuickRecipeIngs, mult);
+      const totalServings = Math.max(0.25, parseNum(document.getElementById('recipeLogTotalServings').value) || 1);
+      const eatenServings = Math.max(0.25, parseNum(document.getElementById('recipeLogEatenServings').value) || 1);
+      const ratio = eatenServings / totalServings;
+      const tot = calcRecipeTotals(pendingQuickRecipeIngs, ratio);
       document.getElementById('recLogKcal').textContent = Math.round(tot.kcal);
       document.getElementById('recLogCarbs').textContent = `${Math.round(tot.c)}g`;
       document.getElementById('recLogProt').textContent = `${Math.round(tot.p)}g`;
       document.getElementById('recLogFat').textContent = `${Math.round(tot.f)}g`;
+      const hint = document.getElementById('recipeLogPortionHint');
+      if (hint) {
+        hint.innerHTML = totalServings > 1
+          ? `Stai registrando <strong class="text-emerald-300">${eatenServings}</strong> su <strong class="text-indigo-300">${totalServings}</strong> porzioni totali (${Math.round(ratio * 100)}% della ricetta).`
+          : `Modifica direttamente i grammi qui sotto se il peso della confezione cambia (es. 570g invece di 500g).`;
+      }
     }
 
     function confirmLogRecipe(saveAsDefault) {
       if (!pendingQuickRecipe) return;
       const meal = document.getElementById('recipeLogMealSelect').value;
-      const mult = Math.max(0.25, parseNum(document.getElementById('recipeLogMultiplier').value) || 1);
+      const totalServings = Math.max(0.25, parseNum(document.getElementById('recipeLogTotalServings').value) || 1);
+      const eatenServings = Math.max(0.25, parseNum(document.getElementById('recipeLogEatenServings').value) || 1);
+      const ratio = eatenServings / totalServings;
+
       if (saveAsDefault) {
         pendingQuickRecipe.ingredients = JSON.parse(JSON.stringify(pendingQuickRecipeIngs));
         pendingQuickRecipe.defaultMeal = meal;
+        pendingQuickRecipe.servings = totalServings;
       }
       const dayObj = getDayData(selectedNutritionDateKey || toLocalDateKey(new Date()));
       pendingQuickRecipeIngs.forEach(ing => {
         const food = findFoodById(ing.foodId);
-        const g = Math.round(parseNum(ing.grams) * mult);
+        const g = Math.round(parseNum(ing.grams) * ratio);
         if (food && g > 0) {
           dayObj.entries.push({
             id: 'ent_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
@@ -4194,10 +4968,29 @@
       }, 'Elimina', true);
     }
 
-    function openRecipeEditorModal() {
-      draftNewRecipeIngs = [];
-      document.getElementById('newRecipeNameInput').value = '';
+    function openRecipeEditorModal(recipeId = null) {
+      editingRecipeId = recipeId || null;
       document.getElementById('newRecipeFoodSelect').innerHTML = getAllFoods().map(f => `<option value="${f.id}">${f.name}</option>`).join('');
+      const titleEl = document.getElementById('recipeEditorModalTitle');
+      const saveBtn = document.getElementById('saveRecipeModalBtn');
+
+      if (editingRecipeId) {
+        const rec = nutriState.recipes.find(r => r.id === editingRecipeId);
+        if (!rec) return;
+        draftNewRecipeIngs = JSON.parse(JSON.stringify(rec.ingredients));
+        document.getElementById('newRecipeNameInput').value = rec.name;
+        document.getElementById('newRecipeMealInput').value = rec.defaultMeal || 'Pranzo';
+        document.getElementById('newRecipeServingsInput').value = Math.max(0.5, parseNum(rec.servings) || 1);
+        if (titleEl) titleEl.textContent = 'Modifica Ricetta';
+        if (saveBtn) saveBtn.textContent = 'Salva Modifiche Ricetta';
+      } else {
+        draftNewRecipeIngs = [];
+        document.getElementById('newRecipeNameInput').value = '';
+        document.getElementById('newRecipeMealInput').value = 'Pranzo';
+        document.getElementById('newRecipeServingsInput').value = 1;
+        if (titleEl) titleEl.textContent = 'Crea Nuova Ricetta';
+        if (saveBtn) saveBtn.textContent = 'Salva Ricetta';
+      }
       renderDraftRecipeIngredients();
       document.getElementById('recipeEditorModal').classList.remove('hidden');
       refreshIcons();
@@ -4205,6 +4998,7 @@
 
     function closeRecipeEditorModal() {
       document.getElementById('recipeEditorModal').classList.add('hidden');
+      editingRecipeId = null;
     }
 
     function addIngredientToDraftRecipe() {
@@ -4214,34 +5008,75 @@
       renderDraftRecipeIngredients();
     }
 
+    function updateDraftRecipeIngGrams(idx, val) {
+      if (draftNewRecipeIngs[idx]) draftNewRecipeIngs[idx].grams = Math.max(0, parseNum(val));
+      updateDraftRecipePreview();
+    }
+
     function removeDraftRecipeIng(idx) {
       draftNewRecipeIngs.splice(idx, 1);
       renderDraftRecipeIngredients();
+    }
+
+    function updateDraftRecipePreview() {
+      const servings = Math.max(0.5, parseNum(document.getElementById('newRecipeServingsInput').value) || 1);
+      const tot = calcRecipeTotals(draftNewRecipeIngs, 1 / servings);
+      const kEl = document.getElementById('draftPrevKcal');
+      if (!kEl) return;
+      kEl.textContent = Math.round(tot.kcal);
+      document.getElementById('draftPrevCarbs').textContent = `${Math.round(tot.c)}g`;
+      document.getElementById('draftPrevProt').textContent = `${Math.round(tot.p)}g`;
+      document.getElementById('draftPrevFat').textContent = `${Math.round(tot.f)}g`;
     }
 
     function renderDraftRecipeIngredients() {
       const cont = document.getElementById('draftRecipeIngredientsContainer');
       if (!draftNewRecipeIngs.length) {
         cont.innerHTML = `<p class="text-xs text-slate-500 text-center py-3">Aggiungi almeno un ingrediente.</p>`;
+        updateDraftRecipePreview();
         return;
       }
       cont.innerHTML = draftNewRecipeIngs.map((ing, idx) => {
         const f = findFoodById(ing.foodId);
         return `
-          <div class="flex items-center justify-between bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs">
-            <span class="text-slate-200 font-semibold truncate">${f ? f.name : ''} (${ing.grams}g)</span>
-            <button type="button" onclick="removeDraftRecipeIng(${idx})" class="text-rose-400 font-bold ml-2">✕</button>
+          <div class="flex items-center justify-between gap-2 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs">
+            <span class="text-slate-200 font-semibold truncate flex-1">${f ? f.name : ''}</span>
+            <div class="flex items-center gap-1.5 shrink-0">
+              <input type="number" inputmode="decimal" value="${ing.grams}" oninput="updateDraftRecipeIngGrams(${idx}, this.value)" class="w-16 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs font-bold text-center text-white focus:outline-none focus:border-emerald-400" />
+              <span class="text-[10px] text-slate-400">g</span>
+              <button type="button" onclick="removeDraftRecipeIng(${idx})" class="text-rose-400 font-bold ml-1">✕</button>
+            </div>
           </div>`;
       }).join('');
+      updateDraftRecipePreview();
     }
 
     function saveNewRecipe() {
       const name = (document.getElementById('newRecipeNameInput').value || '').trim();
-      if (!name || !draftNewRecipeIngs.length) { showToast('Inserisci nome e almeno un ingrediente', true); return; }
+      const servings = Math.max(0.5, parseNum(document.getElementById('newRecipeServingsInput').value) || 1);
+      const cleanIngs = draftNewRecipeIngs.filter(i => parseNum(i.grams) > 0);
+      if (!name || !cleanIngs.length) { showToast('Inserisci nome e almeno un ingrediente', true); return; }
+
+      if (editingRecipeId) {
+        const existing = nutriState.recipes.find(r => r.id === editingRecipeId);
+        if (existing) {
+          existing.name = name;
+          existing.defaultMeal = document.getElementById('newRecipeMealInput').value;
+          existing.servings = servings;
+          existing.ingredients = JSON.parse(JSON.stringify(cleanIngs));
+        }
+        saveNutritionData();
+        closeRecipeEditorModal();
+        renderRecipesList();
+        showToast(`Ricetta "${name}" aggiornata!`);
+        return;
+      }
+
       nutriState.recipes.unshift({
         id: 'rec_' + Date.now(), name,
         defaultMeal: document.getElementById('newRecipeMealInput').value,
-        ingredients: JSON.parse(JSON.stringify(draftNewRecipeIngs))
+        servings,
+        ingredients: JSON.parse(JSON.stringify(cleanIngs))
       });
       saveNutritionData();
       closeRecipeEditorModal();
@@ -4346,7 +5181,9 @@
       const met = parseNum(sel);
       const mins = Math.max(5, parseNum(document.getElementById('extraActMinutes').value) || 30);
       const wKg = getEffectiveWeightForDate(selectedNutritionDateKey || toLocalDateKey(new Date()));
-      document.getElementById('extraActKcal').value = Math.round(met * wKg * (mins / 60));
+      // Per lezioni e studio calcoliamo il dispendio netto sopra il riposo (MET - 1.3) così non si somma doppio al metabolismo base
+      const effectiveMet = met <= 2.5 ? Math.max(0.3, met - 1.3) : met;
+      document.getElementById('extraActKcal').value = Math.round(effectiveMet * wKg * (mins / 60));
     }
 
     function confirmAddExtraActivity() {
@@ -4458,6 +5295,9 @@
             if (Array.isArray(data.nutrition.weightHistory)) nutriState.weightHistory = data.nutrition.weightHistory;
             if (Array.isArray(data.nutrition.foods)) nutriState.foods = data.nutrition.foods;
             if (Array.isArray(data.nutrition.recipes)) nutriState.recipes = data.nutrition.recipes;
+            if (Array.isArray(data.nutrition.favorites)) nutriState.favorites = data.nutrition.favorites;
+            if (Array.isArray(data.nutrition.recentFoodIds)) nutriState.recentFoodIds = data.nutrition.recentFoodIds;
+            if (Array.isArray(data.nutrition.shoppingList)) nutriState.shoppingList = data.nutrition.shoppingList;
             if (data.nutrition.days) nutriState.days = data.nutrition.days;
           }
           saveAllData();
