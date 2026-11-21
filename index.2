@@ -1,0 +1,3721 @@
+<!DOCTYPE html>
+<html lang="it" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>IronOS — Gym &amp; Nutrition OS</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              workout: '#2563eb', // blue-600
+              nutrition: '#059669', // emerald-600
+              accent: '#f59e0b', // amber-500
+              purple: '#9333ea', // purple-600
+              cyan: '#06b6d4', // cyan-500
+              bg: '#090d16'
+            }
+          },
+          fontFamily: {
+            sans: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Display"', '"SF Pro Text"', '"Segoe UI"', 'Roboto', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- External Libraries -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+  <style>
+    /* Fixed Tap Highlight & Select CSS */
+    * {
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    /* iOS Blurred Header & Nav Backdrops */
+    .ios-blur {
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+
+    /* Custom Scrollbar Hide */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    /* Scroll Snap Wheel Utilities */
+    .scroll-wheel {
+      scroll-snap-type: y mandatory;
+      overscroll-behavior-y: contain;
+    }
+    .scroll-wheel-item {
+      scroll-snap-align: center;
+    }
+
+    /* Custom Number Input Spinner Hide */
+    input[type=number]::-webkit-inner-spin-button, 
+    input[type=number]::-webkit-outer-spin-button { 
+      -webkit-appearance: none; 
+      margin: 0; 
+    }
+    input[type=number] {
+      -moz-appearance: textfield;
+    }
+  </style>
+</head>
+<body class="bg-[#090d16] text-slate-100 antialiased min-h-screen pb-24 font-sans select-none overflow-x-hidden">
+
+  <!-- ==================== MAIN STICKY HEADER ==================== -->
+  <header class="sticky top-0 z-40 bg-slate-950/80 border-b border-slate-800/80 ios-blur px-4 py-3 transition-all duration-200">
+    <div class="max-w-lg mx-auto flex items-center justify-between">
+      <!-- App Brand & Context Info -->
+      <div class="flex items-center space-x-3">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 via-blue-600 to-emerald-500 flex items-center justify-center shadow-lg shadow-blue-500/20 font-black text-white text-lg tracking-wider">
+          IO
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <h1 class="text-base font-bold tracking-tight text-white">IronOS</h1>
+            <span id="sessionStatusBadge" class="hidden text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30 flex items-center gap-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse"></span> IN CORSO
+            </span>
+          </div>
+          <p id="headerSubtext" class="text-xs font-medium text-slate-400">Gym &amp; Nutrition OS</p>
+        </div>
+      </div>
+
+      <!-- Action Buttons Right (Tab Dependent) -->
+      <div id="headerActions" class="flex items-center space-x-2">
+        <!-- Dynamic header actions injected via JS -->
+      </div>
+    </div>
+  </header>
+
+  <!-- ==================== MAIN APPLICATION CONTAINER ==================== -->
+  <main class="max-w-lg mx-auto px-4 pt-3 pb-8">
+
+    <!-- ==================== TAB 1: ALLENAMENTO ==================== -->
+    <section id="tab-allenamento" class="tab-content space-y-4">
+      
+      <!-- Sub-Tab Pill Switcher (Scheda Pesi / Mobilità & Stretching) -->
+      <div class="flex p-1 bg-slate-900 border border-slate-800 rounded-2xl">
+        <button id="subtab-btn-pesi" onclick="switchWorkoutSubTab('pesi')" class="flex-1 py-2 rounded-xl text-xs font-bold transition-all bg-blue-600 text-white shadow-md">
+          🏋️ Scheda Pesi
+        </button>
+        <button id="subtab-btn-mobilita" onclick="switchWorkoutSubTab('mobilita')" class="flex-1 py-2 rounded-xl text-xs font-semibold transition-all text-slate-400 hover:text-slate-200">
+          🧘 Mobilità &amp; Stretching
+        </button>
+      </div>
+
+      <!-- SUBTAB CONTENT 1: SCHEDA PESI -->
+      <div id="subtab-pesi-content" class="space-y-4">
+
+        <!-- 1. READINESS & SLEEP CHECK-IN STRIP (FEATURE ADDITION 1) -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 shadow-sm">
+          <div class="flex items-center justify-between cursor-pointer" onclick="toggleReadinessPanel()">
+            <div class="flex items-center space-x-2.5">
+              <div id="readinessBadgeIcon" class="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center font-bold text-xs">
+                ⚡ 88%
+              </div>
+              <div>
+                <div class="flex items-center gap-1.5">
+                  <span class="text-xs font-bold text-slate-200">Stato di Prontezza</span>
+                  <span id="readinessStatusText" class="text-[10px] text-emerald-400 font-semibold px-1.5 py-0.2 rounded bg-emerald-500/10">Eccellente</span>
+                </div>
+                <p id="readinessAdvice" class="text-[11px] text-slate-400">Ottimo recupero! Oggi puoi spingere al massimo.</p>
+              </div>
+            </div>
+            <i data-lucide="chevron-down" id="readinessChevron" class="w-4 h-4 text-slate-400 transition-transform duration-200"></i>
+          </div>
+
+          <!-- Expandable Readiness Slider Inputs -->
+          <div id="readinessInputs" class="hidden mt-3 pt-3 border-t border-slate-800/80 space-y-3">
+            <div>
+              <div class="flex justify-between text-xs text-slate-300 font-medium mb-1">
+                <span>Ore di Sonno: <strong id="sleepVal" class="text-blue-400">7.5 h</strong></span>
+                <span class="text-[10px] text-slate-400">Qualità riposo</span>
+              </div>
+              <input type="range" id="sleepSlider" min="4" max="11" step="0.5" value="7.5" oninput="updateReadinessFromInputs()" class="w-full accent-blue-500 bg-slate-800 rounded-lg h-1.5">
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs text-slate-300 font-medium mb-1">
+                <span>Livello Energia: <strong id="energyVal" class="text-amber-400">8/10</strong></span>
+                <span class="text-[10px] text-slate-400">Percezione fisica</span>
+              </div>
+              <input type="range" id="energySlider" min="1" max="10" step="1" value="8" oninput="updateReadinessFromInputs()" class="w-full accent-amber-500 bg-slate-800 rounded-lg h-1.5">
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs text-slate-300 font-medium mb-1">
+                <span>Dolori / DOMS: <strong id="domsVal" class="text-purple-400">Lieve (2/10)</strong></span>
+                <span class="text-[10px] text-slate-400">Affaticamento</span>
+              </div>
+              <input type="range" id="domsSlider" min="0" max="10" step="1" value="2" oninput="updateReadinessFromInputs()" class="w-full accent-purple-500 bg-slate-800 rounded-lg h-1.5">
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. ROUTINE SELECTOR PILLS -->
+        <div class="space-y-2">
+          <div class="flex items-center justify-between text-xs text-slate-400 font-semibold px-1">
+            <span>SELEZIONA SCHEDA WORKOUT</span>
+            <button onclick="openRoutineManager()" class="text-blue-400 hover:text-blue-300 text-xs font-medium flex items-center gap-1">
+              <i data-lucide="settings" class="w-3.5 h-3.5"></i> Gestisci
+            </button>
+          </div>
+          <div id="routinePillsContainer" class="flex gap-2 overflow-x-auto no-scrollbar py-1">
+            <!-- Dynamic Routine Pills injected via JS -->
+          </div>
+        </div>
+
+        <!-- 3. LIVE WORKOUT METRICS BAR & TOOLS -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 flex items-center justify-between shadow-sm">
+          <div class="flex items-center space-x-4">
+            <div>
+              <p class="text-[10px] uppercase tracking-wider font-semibold text-slate-400">Volume</p>
+              <p id="liveVolumeText" class="text-sm font-black text-slate-100">0 kg</p>
+            </div>
+            <div class="w-px h-6 bg-slate-800"></div>
+            <div>
+              <p class="text-[10px] uppercase tracking-wider font-semibold text-slate-400">Serie Totali</p>
+              <p id="liveSetsText" class="text-sm font-black text-blue-400">0</p>
+            </div>
+            <div class="w-px h-6 bg-slate-800"></div>
+            <div>
+              <p class="text-[10px] uppercase tracking-wider font-semibold text-slate-400">Stima Kcal</p>
+              <p id="liveKcalText" class="text-sm font-black text-amber-400">0 kcal</p>
+            </div>
+          </div>
+
+          <!-- PLATE CALCULATOR ICON BUTTON (FEATURE ADDITION 2) -->
+          <button onclick="openPlateCalculatorModal()" class="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-750 transition-colors" title="Calcolatore Dischi Bilanciere">
+            <i data-lucide="disc" class="w-4 h-4 text-indigo-400"></i>
+            <span class="hidden sm:inline">Dischi</span>
+          </button>
+        </div>
+
+        <!-- 4. AUTO REST TIMER BAR -->
+        <div id="restTimerBar" class="bg-slate-900/90 border border-slate-800 rounded-2xl p-3 flex items-center justify-between">
+          <div class="flex items-center space-x-2.5">
+            <div class="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center">
+              <i data-lucide="timer" class="w-4 h-4"></i>
+            </div>
+            <div>
+              <p class="text-xs font-bold text-slate-200">Recupero Automatizzato</p>
+              <p id="timerDisplay" class="text-xs font-mono font-bold text-blue-400">00:00</p>
+            </div>
+          </div>
+          <div class="flex items-center space-x-1.5">
+            <button onclick="startRestTimer(60)" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-[11px] font-semibold text-slate-300 rounded-lg">60s</button>
+            <button onclick="startRestTimer(90)" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-[11px] font-semibold text-slate-300 rounded-lg">90s</button>
+            <button onclick="startRestTimer(120)" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-[11px] font-semibold text-slate-300 rounded-lg">2m</button>
+            <button onclick="addRestTimerTime(15)" class="px-2 py-1 bg-blue-600/20 text-blue-400 border border-blue-500/30 text-[11px] font-semibold rounded-lg">+15s</button>
+            <button id="autoTimerToggle" onclick="toggleAutoTimer()" class="px-2 py-1 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[11px] font-semibold rounded-lg">Auto: ON</button>
+          </div>
+        </div>
+
+        <!-- 5. ACTIVE WORKOUT EXERCISES CONTAINER -->
+        <div id="workoutExercisesContainer" class="space-y-4">
+          <!-- Dynamic Exercise Cards injected via JS -->
+        </div>
+
+        <!-- 6. ADD EXERCISE & SAVE ROUTINE BUTTONS -->
+        <div class="flex gap-2">
+          <button onclick="openExercisePickerModal()" class="flex-1 py-3 bg-slate-900 border border-slate-800 hover:bg-slate-800/80 rounded-2xl text-xs font-bold text-slate-200 flex items-center justify-center gap-2 transition-all">
+            <i data-lucide="plus-circle" class="w-4 h-4 text-blue-400"></i> Aggiungi Esercizio
+          </button>
+          <button onclick="saveCurrentAsNewRoutine()" class="px-4 py-3 bg-slate-900 border border-slate-800 hover:bg-slate-800/80 rounded-2xl text-xs font-bold text-purple-400 flex items-center justify-center gap-1.5 transition-all">
+            <i data-lucide="bookmark-plus" class="w-4 h-4"></i> Salva Routine
+          </button>
+        </div>
+
+        <!-- 7. SESSION NOTE CARD -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 space-y-2">
+          <label class="text-xs font-bold text-slate-400 flex items-center gap-1.5">
+            <i data-lucide="sticky-note" class="w-3.5 h-3.5 text-amber-400"></i> Note Sessione Allenamento
+          </label>
+          <textarea id="workoutSessionNote" rows="2" placeholder="Sensazioni, RPE generale, fastidi articolari..." class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500/50 resize-none"></textarea>
+        </div>
+
+        <!-- 8. COMPLETE & SAVE WORKOUT MAIN BUTTON -->
+        <button onclick="completeAndSaveWorkout()" class="w-full py-3.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-500 hover:to-indigo-600 text-white font-bold text-sm rounded-2xl shadow-lg shadow-blue-600/25 flex items-center justify-center gap-2 transition-all">
+          <i data-lucide="check-circle-2" class="w-5 h-5"></i> Salva e Concludi Sessione
+        </button>
+
+      </div>
+
+      <!-- SUBTAB CONTENT 2: MOBILITÀ & STRETCHING -->
+      <div id="subtab-mobilita-content" class="hidden space-y-4">
+        
+        <!-- Stretching Presets selection -->
+        <div class="grid grid-cols-2 gap-2">
+          <button onclick="selectStretchingRoutine('full')" id="stretch-btn-full" class="p-3 bg-slate-900 border-2 border-blue-500 rounded-2xl text-left">
+            <span class="text-xs font-bold text-white block">🧘 Completo 15 Min</span>
+            <span class="text-[10px] text-slate-400">Decompressione globale</span>
+          </button>
+          <button onclick="selectStretchingRoutine('lampo')" id="stretch-btn-lampo" class="p-3 bg-slate-900 border border-slate-800 rounded-2xl text-left">
+            <span class="text-xs font-bold text-white block">⚡ Lampo 5 Min</span>
+            <span class="text-[10px] text-slate-400">Post-workout veloce</span>
+          </button>
+        </div>
+
+        <!-- Guided Breathing Box -->
+        <div class="bg-gradient-to-br from-slate-900 to-indigo-950/40 border border-indigo-500/30 rounded-2xl p-4 text-center space-y-3">
+          <div class="flex items-center justify-center space-x-2">
+            <i data-lucide="wind" class="w-4 h-4 text-indigo-400"></i>
+            <span class="text-xs font-bold text-indigo-300">Respirazione Guidata Vaga (4" IN / 6" OUT)</span>
+          </div>
+          <div class="relative w-24 h-24 mx-auto flex items-center justify-center">
+            <div id="breathingCircle" class="absolute inset-0 rounded-full bg-indigo-500/20 border-2 border-indigo-400 transition-all duration-1000 scale-75"></div>
+            <span id="breathingPhaseText" class="relative text-xs font-black text-white">INSPIRA</span>
+          </div>
+          <p class="text-[11px] text-slate-400">Sincronizza lo stretching con l'espirazione lenta per ridurre il cortisolo.</p>
+        </div>
+
+        <!-- Stretching Exercises Checklist -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 space-y-3">
+          <h3 class="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+            <i data-lucide="list-checks" class="w-4 h-4 text-emerald-400"></i> Esercizi Routine Selezionata
+          </h3>
+          <div id="stretchingListContainer" class="space-y-2">
+            <!-- Dynamic stretching list items injected via JS -->
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- ==================== TAB 2: CALENDARIO ==================== -->
+    <section id="tab-calendario" class="tab-content hidden space-y-4">
+      
+      <!-- Time View Switcher (Settimana / Mese / Anno) -->
+      <div class="flex items-center justify-between bg-slate-900 border border-slate-800 rounded-2xl p-1">
+        <div class="flex space-x-1">
+          <button onclick="switchCalendarView('week')" id="cal-view-week" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-blue-600 text-white">Settimana</button>
+          <button onclick="switchCalendarView('month')" id="cal-view-month" class="px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-400">Mese</button>
+          <button onclick="switchCalendarView('year')" id="cal-view-year" class="px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-400">Anno</button>
+        </div>
+        <!-- Legend Toggle Button -->
+        <button onclick="toggleCalendarLegendModal()" class="px-2.5 py-1.5 text-xs text-slate-400 hover:text-slate-200 flex items-center gap-1 font-medium">
+          <i data-lucide="palette" class="w-3.5 h-3.5"></i> Legenda
+        </button>
+      </div>
+
+      <!-- Calendar Navigation Header -->
+      <div class="flex items-center justify-between px-2">
+        <button onclick="navigateCalendarPeriod(-1)" class="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white">
+          <i data-lucide="chevron-left" class="w-4 h-4"></i>
+        </button>
+        <span id="calendarPeriodTitle" class="text-sm font-bold text-white">Novembre 2026</span>
+        <button onclick="navigateCalendarPeriod(1)" class="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white">
+          <i data-lucide="chevron-right" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <!-- Interactive Grid Container -->
+      <div id="calendarGridContainer" class="bg-slate-900 border border-slate-800 rounded-2xl p-3 shadow-sm">
+        <!-- Dynamic Grid injected via JS -->
+      </div>
+
+      <!-- Selected Day History Section -->
+      <div class="space-y-3">
+        <div class="flex items-center justify-between px-1">
+          <h3 id="selectedDateHistoryTitle" class="text-xs font-bold text-slate-300">Sessioni del Giorno</h3>
+          <span id="selectedDateHistoryCount" class="text-[11px] font-semibold text-slate-500">0 Allenamenti</span>
+        </div>
+        <div id="historyCardsContainer" class="space-y-3">
+          <!-- Dynamic Workout History Cards injected via JS -->
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ==================== TAB 3: PROGRESSI ==================== -->
+    <section id="tab-progressi" class="tab-content hidden space-y-4">
+      
+      <!-- ESERCIZIO STRENGTH PROGRESS CHART -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3 shadow-sm">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-2">
+            <i data-lucide="line-chart" class="w-4 h-4 text-blue-400"></i>
+            <h3 class="text-xs font-bold text-slate-200">Progressione Forza Esercizio</h3>
+          </div>
+          <!-- Exercise Select dropdown for chart -->
+          <select id="chartExerciseSelect" onchange="renderStrengthChart()" class="bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1 text-xs text-blue-400 font-bold focus:outline-none">
+            <!-- Options populated dynamically -->
+          </select>
+        </div>
+
+        <!-- Metric toggle pills (Tutte le Serie / Media vs Picco / Volume) -->
+        <div class="flex gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800">
+          <button onclick="setStrengthChartMode('all')" id="chart-mode-all" class="flex-1 py-1 rounded-lg text-[10px] font-bold bg-blue-600 text-white">Tutte Serie</button>
+          <button onclick="setStrengthChartMode('avg_max')" id="chart-mode-avg" class="flex-1 py-1 rounded-lg text-[10px] font-semibold text-slate-400">Media vs Max</button>
+          <button onclick="setStrengthChartMode('volume')" id="chart-mode-vol" class="flex-1 py-1 rounded-lg text-[10px] font-semibold text-slate-400">Volume Totale</button>
+        </div>
+
+        <!-- Chart Canvas -->
+        <div class="relative h-48 w-full">
+          <canvas id="strengthChartCanvas"></canvas>
+        </div>
+
+        <!-- Exercise KPIs Breakdown -->
+        <div class="grid grid-cols-3 gap-2 pt-2 border-t border-slate-800/80 text-center">
+          <div class="bg-slate-950/70 p-2 rounded-xl border border-slate-800">
+            <p class="text-[9px] uppercase text-slate-400 font-semibold">Massimale (1RM Est.)</p>
+            <p id="kpiEst1RM" class="text-xs font-black text-amber-400">-- kg</p>
+          </div>
+          <div class="bg-slate-950/70 p-2 rounded-xl border border-slate-800">
+            <p class="text-[9px] uppercase text-slate-400 font-semibold">Max Carico Reale</p>
+            <p id="kpiMaxWeight" class="text-xs font-black text-blue-400">-- kg</p>
+          </div>
+          <div class="bg-slate-950/70 p-2 rounded-xl border border-slate-800">
+            <p class="text-[9px] uppercase text-slate-400 font-semibold">Volume Record</p>
+            <p id="kpiBestVolume" class="text-xs font-black text-emerald-400">-- kg</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- BACHECA RECORD PERSONALI PR (FEATURE ADDITION 3) -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3 shadow-sm">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-2">
+            <i data-lucide="trophy" class="w-4 h-4 text-amber-400"></i>
+            <h3 class="text-xs font-bold text-slate-200">Bacheca Record Personali (PR)</h3>
+          </div>
+          <span class="text-[10px] text-amber-400 font-semibold px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20">All-Time</span>
+        </div>
+        <div id="prBoardContainer" class="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto no-scrollbar">
+          <!-- Dynamic PR Records injected via JS -->
+        </div>
+      </div>
+
+      <!-- MUSCLE VOLUME TRACKER (FEATURE ADDITION 4) -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3 shadow-sm">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-2">
+            <i data-lucide="dumbbell" class="w-4 h-4 text-purple-400"></i>
+            <h3 class="text-xs font-bold text-slate-200">Volume Settimanale Muscolare</h3>
+          </div>
+          <span class="text-[10px] text-slate-400">Ultimi 7 Giorni</span>
+        </div>
+        <div id="muscleVolumeContainer" class="space-y-2">
+          <!-- Dynamic Muscle Group Volume Bars injected via JS -->
+        </div>
+        <p class="text-[10px] text-slate-500 italic text-center">Zona ipertrofia ottimale: 10 - 20 serie valide a settimana per gruppo.</p>
+      </div>
+
+      <!-- BODY WEIGHT PROGRESS CHART -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3 shadow-sm">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-2">
+            <i data-lucide="scale" class="w-4 h-4 text-emerald-400"></i>
+            <h3 class="text-xs font-bold text-slate-200">Andamento Peso Corporeo</h3>
+          </div>
+          <button onclick="openBodyProfileModal()" class="text-xs text-emerald-400 font-semibold flex items-center gap-1 hover:underline">
+            <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i> Aggiorna
+          </button>
+        </div>
+
+        <div class="relative h-44 w-full">
+          <canvas id="weightChartCanvas"></canvas>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ==================== TAB 4: NUTRIZIONE ==================== -->
+    <section id="tab-nutrizione" class="tab-content hidden space-y-4">
+      
+      <!-- Sub-Tab Navigation Bar (Diario, Vitamine, Ricette, Spesa) -->
+      <div class="flex p-1 bg-slate-900 border border-slate-800 rounded-2xl">
+        <button id="nutri-subtab-diario" onclick="switchNutritionSubTab('diario')" class="flex-1 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 text-white shadow-md">
+          📖 Diario
+        </button>
+        <button id="nutri-subtab-vitamine" onclick="switchNutritionSubTab('vitamine')" class="flex-1 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200">
+          💊 Vitamine
+        </button>
+        <button id="nutri-subtab-ricette" onclick="switchNutritionSubTab('ricette')" class="flex-1 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200">
+          🍳 Ricette
+        </button>
+        <button id="nutri-subtab-spesa" onclick="switchNutritionSubTab('spesa')" class="flex-1 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200">
+          🛒 Spesa
+        </button>
+      </div>
+
+      <!-- SUBTAB 1: DIARIO NUTRIZIONALE -->
+      <div id="nutri-subtab-diario-content" class="space-y-4">
+
+        <!-- 1. DATE NAVIGATOR STRIP -->
+        <div class="flex items-center justify-between bg-slate-900 border border-slate-800 rounded-2xl p-2.5">
+          <button onclick="navigateNutritionDate(-1)" class="p-1.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-300 hover:text-white">
+            <i data-lucide="chevron-left" class="w-4 h-4"></i>
+          </button>
+          <div class="text-center">
+            <span id="nutritionDateDisplay" class="text-xs font-bold text-white block">Oggi, 21 Nov</span>
+            <span id="nutritionDateSubtext" class="text-[10px] text-slate-400">Target Dinamico Mifflin-St Jeor</span>
+          </div>
+          <button onclick="navigateNutritionDate(1)" class="p-1.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-300 hover:text-white">
+            <i data-lucide="chevron-right" class="w-4 h-4"></i>
+          </button>
+        </div>
+
+        <!-- 2. YAZIO-STYLE CALORIE RING CARD -->
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-lg relative overflow-hidden">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <span id="nutritionStreakBadge" class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                🔥 STREAK 5 GIORNI
+              </span>
+              <h2 class="text-base font-black text-white mt-1">Bilancio Calorico</h2>
+            </div>
+            <!-- Daily Score Badge -->
+            <div class="text-right">
+              <span class="text-[10px] text-slate-400 font-semibold block">SCORE DIARIO</span>
+              <span id="dailyScoreBadge" class="text-sm font-black text-emerald-400">92/100</span>
+            </div>
+          </div>
+
+          <!-- Yazio Circular Ring + Stats Layout -->
+          <div class="flex items-center justify-around my-2">
+            <!-- Left Stat: Assunte -->
+            <div class="text-center space-y-0.5">
+              <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Assunte</span>
+              <p id="kcalConsumedText" class="text-lg font-black text-emerald-400">0</p>
+              <span class="text-[10px] text-slate-500">kcal</span>
+            </div>
+
+            <!-- Central Yazio SVG Ring -->
+            <div class="relative w-36 h-36 flex items-center justify-center">
+              <svg class="w-full h-full transform -rotate-90" viewBox="0 0 120 120">
+                <!-- Background Circle Track -->
+                <circle cx="60" cy="60" r="48" stroke="currentColor" stroke-width="10" class="text-slate-800" fill="transparent" />
+                <!-- Dynamic Progress Ring -->
+                <circle id="yazioProgressCircle" cx="60" cy="60" r="48" stroke="currentColor" stroke-width="10" stroke-dasharray="301.59" stroke-dashoffset="301.59" stroke-linecap="round" class="text-emerald-500 transition-all duration-700" fill="transparent" />
+              </svg>
+              <div class="absolute inset-0 flex flex-col items-center justify-center text-center">
+                <span class="text-[10px] uppercase font-bold text-slate-400">Rimanenti</span>
+                <span id="kcalRemainingText" class="text-2xl font-black text-white tracking-tight">2'350</span>
+                <span class="text-[10px] text-slate-400 font-medium">kcal</span>
+              </div>
+            </div>
+
+            <!-- Right Stat: Bruciate -->
+            <div class="text-center space-y-0.5">
+              <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Bruciate</span>
+              <p id="kcalBurnedText" class="text-lg font-black text-amber-400">350</p>
+              <span class="text-[10px] text-slate-500">kcal</span>
+            </div>
+          </div>
+
+          <!-- 3 MACRONUTRIENT PROGRESS BARS -->
+          <div class="grid grid-cols-3 gap-3 mt-4 pt-4 border-t border-slate-800">
+            <!-- Carbo -->
+            <div>
+              <div class="flex justify-between text-[11px] font-bold mb-1">
+                <span class="text-slate-300">Carbo</span>
+                <span id="carbsMacroText" class="text-emerald-400">0 / 280g</span>
+              </div>
+              <div class="w-full bg-slate-950 rounded-full h-2 overflow-hidden border border-slate-800">
+                <div id="carbsProgressBar" class="bg-emerald-500 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+              </div>
+            </div>
+
+            <!-- Proteine -->
+            <div>
+              <div class="flex justify-between text-[11px] font-bold mb-1">
+                <span class="text-slate-300">Proteine</span>
+                <span id="proteinMacroText" class="text-blue-400">0 / 160g</span>
+              </div>
+              <div class="w-full bg-slate-950 rounded-full h-2 overflow-hidden border border-slate-800">
+                <div id="proteinProgressBar" class="bg-blue-500 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+              </div>
+            </div>
+
+            <!-- Grassi -->
+            <div>
+              <div class="flex justify-between text-[11px] font-bold mb-1">
+                <span class="text-slate-300">Grassi</span>
+                <span id="fatMacroText" class="text-amber-400">0 / 70g</span>
+              </div>
+              <div class="w-full bg-slate-950 rounded-full h-2 overflow-hidden border border-slate-800">
+                <div id="fatProgressBar" class="bg-amber-500 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 7-Day Average Banner -->
+          <div class="mt-3 pt-2 text-center border-t border-slate-800/60">
+            <span id="sevenDayAvgBanner" class="text-[11px] text-slate-400">Media 7 giorni: <strong class="text-white">2.210 kcal/giorno</strong> (Perfetto in target)</span>
+          </div>
+        </div>
+
+        <!-- SMART COACH ("Cosa Mangio?") BANNER -->
+        <div class="bg-gradient-to-r from-emerald-950/40 via-slate-900 to-slate-900 border border-emerald-500/30 rounded-2xl p-3.5 flex items-center justify-between">
+          <div class="flex items-center space-x-3">
+            <div class="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+              <i data-lucide="sparkles" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <p class="text-xs font-bold text-white">Smart Coach "Cosa mangio ora?"</p>
+              <p id="smartCoachAdvice" class="text-[11px] text-slate-300">Prossimo pasto: Ti mancano 45g Proteine. Consiglio: Petto di Pollo o Feta Greca.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- QUICK ACTION BUTTONS ROW (INCLUDING FAST COPY & QUICK ADD MACRO) -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <button onclick="openBarcodeScannerModal()" class="py-2.5 px-3 bg-slate-900 border border-slate-800 hover:bg-slate-800 rounded-2xl text-xs font-bold text-slate-200 flex items-center justify-center gap-2">
+            <i data-lucide="qr-code" class="w-4 h-4 text-emerald-400"></i> Barcode
+          </button>
+          <button onclick="openFoodLoggerModal(null)" class="py-2.5 px-3 bg-slate-900 border border-slate-800 hover:bg-slate-800 rounded-2xl text-xs font-bold text-slate-200 flex items-center justify-center gap-2">
+            <i data-lucide="search" class="w-4 h-4 text-blue-400"></i> Cerca Cibo
+          </button>
+          <!-- QUICK ADD MACRO BUTTON (FEATURE ADDITION 7) -->
+          <button onclick="openQuickAddMacroModal()" class="py-2.5 px-3 bg-slate-900 border border-slate-800 hover:bg-slate-800 rounded-2xl text-xs font-bold text-amber-400 flex items-center justify-center gap-1.5">
+            <i data-lucide="zap" class="w-4 h-4"></i> Add Rapido
+          </button>
+          <!-- COPY WHOLE DAY FROM YESTERDAY (FEATURE ADDITION 7) -->
+          <button onclick="copyWholeDayFromYesterday()" class="py-2.5 px-3 bg-slate-900 border border-slate-800 hover:bg-slate-800 rounded-2xl text-xs font-bold text-purple-400 flex items-center justify-center gap-1.5">
+            <i data-lucide="copy" class="w-4 h-4"></i> Copia Ieri
+          </button>
+        </div>
+
+        <!-- SPORT & UNI/STUDIO EXPENDITURE INPUT CARD -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+              <i data-lucide="flame" class="w-4 h-4 text-amber-400"></i>
+              <h3 class="text-xs font-bold text-slate-200">Attività &amp; Dispendio Giornaliero</h3>
+            </div>
+            <span id="extraBurnCalculated" class="text-xs font-black text-amber-400">+350 kcal</span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Ore Sport / Allenam.</label>
+              <div class="flex items-center space-x-2">
+                <input type="number" id="sportHoursInput" step="0.5" value="1.0" min="0" max="8" onchange="updateDailyExpenditure()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white font-bold text-center">
+                <span class="text-xs text-slate-400">ore</span>
+              </div>
+            </div>
+            <div>
+              <label class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Ore Uni / Studio / Cammino</label>
+              <div class="flex items-center space-x-2">
+                <input type="number" id="uniHoursInput" step="0.5" value="4.0" min="0" max="14" onchange="updateDailyExpenditure()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white font-bold text-center">
+                <span class="text-xs text-slate-400">ore</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4 MEAL CARDS (Colazione, Pranzo, Cena, Spuntini) -->
+        <div id="mealCardsContainer" class="space-y-3">
+          <!-- Dynamic Meal Cards injected via JS -->
+        </div>
+
+        <!-- HYDRATION TRACKER CARD -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+              <i data-lucide="droplet" class="w-4 h-4 text-cyan-400"></i>
+              <h3 class="text-xs font-bold text-slate-200">Idratazione Giornaliera</h3>
+            </div>
+            <span id="waterGoalText" class="text-xs font-bold text-cyan-400">1.750 / 2.500 ml</span>
+          </div>
+
+          <div class="w-full bg-slate-950 rounded-full h-3 overflow-hidden border border-slate-800">
+            <div id="waterProgressBar" class="bg-cyan-500 h-full rounded-full transition-all duration-500" style="width: 70%"></div>
+          </div>
+
+          <div class="flex items-center justify-between gap-2 pt-1">
+            <div class="flex gap-1.5">
+              <button onclick="addWater(250)" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-750 text-xs font-bold text-cyan-300 rounded-xl border border-slate-700">+250ml</button>
+              <button onclick="addWater(500)" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-750 text-xs font-bold text-cyan-300 rounded-xl border border-slate-700">+500ml</button>
+            </div>
+            <div class="flex items-center space-x-1.5">
+              <input type="number" id="customWaterInput" placeholder="ml" class="w-16 bg-slate-950 border border-slate-800 rounded-xl px-2 py-1 text-xs text-white font-bold text-center">
+              <button onclick="addCustomWater()" class="px-2.5 py-1 bg-cyan-600 hover:bg-cyan-500 text-xs font-bold text-white rounded-xl">Aggiungi</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- SUPPLEMENT TRACKER CARD (FEATURE ADDITION 5) -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+              <i data-lucide="pill" class="w-4 h-4 text-purple-400"></i>
+              <h3 class="text-xs font-bold text-slate-200">Tracker Integratori Giornalieri</h3>
+            </div>
+            <button onclick="openAddSupplementModal()" class="text-xs text-purple-400 font-semibold hover:underline">+ Aggiungi</button>
+          </div>
+          <div id="supplementListContainer" class="grid grid-cols-2 gap-2">
+            <!-- Dynamic Supplements injected via JS -->
+          </div>
+        </div>
+
+        <!-- INTERMITTENT FASTING TIMER CARD (FEATURE ADDITION 6) -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+              <i data-lucide="clock" class="w-4 h-4 text-indigo-400"></i>
+              <h3 class="text-xs font-bold text-slate-200">Timer Digiuno Intermittente</h3>
+            </div>
+            <div class="flex gap-1">
+              <button onclick="setFastingPreset('16:8')" id="fasting-btn-16" class="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-600 text-white">16:8</button>
+              <button onclick="setFastingPreset('14:10')" id="fasting-btn-14" class="px-2 py-0.5 rounded text-[10px] font-semibold text-slate-400">14:10</button>
+              <button onclick="setFastingPreset('18:6')" id="fasting-btn-18" class="px-2 py-0.5 rounded text-[10px] font-semibold text-slate-400">18:6</button>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between bg-slate-950 p-3 rounded-xl border border-slate-800">
+            <div>
+              <span id="fastingPhaseText" class="text-[10px] uppercase font-bold text-indigo-400 tracking-wider">Fase: Glicogeno / Brucia Grassi</span>
+              <p id="fastingTimerDisplay" class="text-lg font-mono font-black text-white">14:22:10</p>
+              <p id="fastingRemainingText" class="text-[10px] text-slate-400">Rimanenti: 01h 37m su 16h</p>
+            </div>
+            <button id="fastingStartToggleBtn" onclick="toggleFastingTimer()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 font-bold text-xs text-white rounded-xl shadow-md">
+              PAUSA
+            </button>
+          </div>
+          <div class="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden border border-slate-800">
+            <div id="fastingProgressBar" class="bg-indigo-500 h-full rounded-full transition-all duration-500" style="width: 88%"></div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- SUBTAB 2: VITAMINE & MICRONUTRIENTI (LARN/EFSA) -->
+      <div id="nutri-subtab-vitamine-content" class="hidden space-y-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+              <i data-lucide="shield-check" class="w-4 h-4 text-emerald-400"></i> Copertura Micronutrienti LARN / EFSA
+            </h3>
+            <span class="text-[10px] font-semibold text-slate-400">Stima Giornaliera</span>
+          </div>
+
+          <div id="micronutrientsContainer" class="space-y-3">
+            <!-- Dynamic 12 Micronutrient Bars injected via JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- SUBTAB 3: RICETTE & MEAL PREP -->
+      <div id="nutri-subtab-ricette-content" class="hidden space-y-4">
+        <div class="flex items-center justify-between px-1">
+          <h3 class="text-xs font-bold text-slate-300">Ricette &amp; Meal Prep Salvati</h3>
+          <button onclick="openCreateRecipeModal()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center gap-1 shadow-sm">
+            <i data-lucide="plus" class="w-3.5 h-3.5"></i> Nuova Ricetta
+          </button>
+        </div>
+
+        <div id="recipesListContainer" class="space-y-3">
+          <!-- Dynamic Recipe Cards injected via JS -->
+        </div>
+      </div>
+
+      <!-- SUBTAB 4: LISTA DELLA SPESA -->
+      <div id="nutri-subtab-spesa-content" class="hidden space-y-4">
+        <!-- Budget Tracker Bar -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-slate-200">Budget Spesa Settimanale</span>
+            <span id="shoppingBudgetDisplay" class="text-xs font-black text-emerald-400">Totale Spuntato: 24.50 € / 40.00 €</span>
+          </div>
+          <div class="w-full bg-slate-950 rounded-full h-2 overflow-hidden border border-slate-800">
+            <div id="shoppingBudgetProgressBar" class="bg-emerald-500 h-full rounded-full transition-all duration-500" style="width: 61%"></div>
+          </div>
+        </div>
+
+        <!-- Add Item Form -->
+        <div class="flex gap-2">
+          <input type="text" id="newShoppingItemInput" placeholder="Es. Fiocchi d'avena, Feta, Pollo..." class="flex-1 bg-slate-900 border border-slate-800 rounded-2xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500">
+          <input type="number" id="newShoppingItemPrice" placeholder="€" step="0.5" class="w-20 bg-slate-900 border border-slate-800 rounded-2xl px-2 py-2.5 text-xs text-white font-bold text-center focus:outline-none focus:border-emerald-500">
+          <button onclick="addShoppingItem()" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-bold text-xs">
+            + Aggiungi
+          </button>
+        </div>
+
+        <!-- Checklist -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-2">
+          <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Articoli in Lista</span>
+            <button onclick="resetShoppingChecks()" class="text-xs text-slate-400 hover:text-slate-200">Deseleziona Tutti</button>
+          </div>
+          <div id="shoppingListItemsContainer" class="space-y-2 pt-1">
+            <!-- Dynamic Shopping Items injected via JS -->
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ==================== TAB 5: OPZIONI ==================== -->
+    <section id="tab-opzioni" class="tab-content hidden space-y-4">
+      
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
+        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Profilo &amp; Parametri</h3>
+        
+        <button onclick="openBodyProfileModal()" class="w-full p-3 bg-slate-950 border border-slate-800 hover:border-slate-700 rounded-xl flex items-center justify-between text-left">
+          <div class="flex items-center space-x-3">
+            <div class="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center">
+              <i data-lucide="user" class="w-4 h-4"></i>
+            </div>
+            <div>
+              <p class="text-xs font-bold text-white">Profilo Corporeo &amp; Obiettivi Kcal</p>
+              <p id="optionsProfileSummary" class="text-[10px] text-slate-400">78.5 kg · Mifflin-St Jeor · +300 Surplus</p>
+            </div>
+          </div>
+          <i data-lucide="chevron-right" class="w-4 h-4 text-slate-500"></i>
+        </button>
+      </div>
+
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
+        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Librerie &amp; Editor</h3>
+        
+        <button onclick="openRoutineManager()" class="w-full p-3 bg-slate-950 border border-slate-800 hover:border-slate-700 rounded-xl flex items-center justify-between text-left">
+          <div class="flex items-center space-x-3">
+            <div class="w-8 h-8 rounded-lg bg-purple-500/10 text-purple-400 flex items-center justify-center">
+              <i data-lucide="folder" class="w-4 h-4"></i>
+            </div>
+            <div>
+              <p class="text-xs font-bold text-white">Gestione Schede Routine</p>
+              <p class="text-[10px] text-slate-400">Crea, edita, riordina o elimina routine</p>
+            </div>
+          </div>
+          <i data-lucide="chevron-right" class="w-4 h-4 text-slate-500"></i>
+        </button>
+
+        <button onclick="openExerciseLibraryModal()" class="w-full p-3 bg-slate-950 border border-slate-800 hover:border-slate-700 rounded-xl flex items-center justify-between text-left">
+          <div class="flex items-center space-x-3">
+            <div class="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-400 flex items-center justify-center">
+              <i data-lucide="database" class="w-4 h-4"></i>
+            </div>
+            <div>
+              <p class="text-xs font-bold text-white">Libreria Esercizi</p>
+              <p class="text-[10px] text-slate-400">Aggiungi esercizi personalizzati</p>
+            </div>
+          </div>
+          <i data-lucide="chevron-right" class="w-4 h-4 text-slate-500"></i>
+        </button>
+      </div>
+
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
+        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Dati Backup &amp; Esportazione</h3>
+        
+        <div class="grid grid-cols-2 gap-2">
+          <button onclick="exportCSV()" class="p-3 bg-slate-950 border border-slate-800 hover:bg-slate-800/60 rounded-xl text-xs font-bold text-slate-200 flex items-center justify-center gap-2">
+            <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-400"></i> Esporta CSV
+          </button>
+          <button onclick="exportJSONBackup()" class="p-3 bg-slate-950 border border-slate-800 hover:bg-slate-800/60 rounded-xl text-xs font-bold text-slate-200 flex items-center justify-center gap-2">
+            <i data-lucide="download" class="w-4 h-4 text-blue-400"></i> Backup JSON
+          </button>
+        </div>
+
+        <label class="block cursor-pointer">
+          <input type="file" id="jsonFileInput" accept=".json" onchange="importJSONBackup(event)" class="hidden">
+          <div class="w-full p-3 bg-slate-950 border border-slate-800 hover:bg-slate-800/60 rounded-xl text-xs font-bold text-purple-400 flex items-center justify-center gap-2 text-center">
+            <i data-lucide="upload" class="w-4 h-4"></i> Ripristina da Backup JSON
+          </div>
+        </label>
+
+        <button onclick="confirmFactoryReset()" class="w-full p-3 bg-red-500/10 border border-red-500/30 hover:bg-red-500/20 rounded-xl text-xs font-bold text-red-400 flex items-center justify-center gap-2">
+          <i data-lucide="trash-2" class="w-4 h-4"></i> Reset di Fabbrica (Cancella Tutto)
+        </button>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ==================== FIXED 5-TAB BOTTOM NAVIGATION BAR ==================== -->
+  <nav class="fixed bottom-0 left-0 right-0 z-40 bg-slate-950/90 border-t border-slate-800/80 ios-blur py-2 px-3">
+    <div class="max-w-lg mx-auto flex items-center justify-between">
+      <button onclick="switchTab('allenamento')" id="nav-btn-allenamento" class="flex-1 flex flex-col items-center py-1 text-blue-400 font-bold transition-all">
+        <i data-lucide="dumbbell" class="w-5 h-5"></i>
+        <span class="text-[10px] mt-1">Allenam.</span>
+      </button>
+      <button onclick="switchTab('calendario')" id="nav-btn-calendario" class="flex-1 flex flex-col items-center py-1 text-slate-500 font-medium hover:text-slate-300 transition-all">
+        <i data-lucide="calendar" class="w-5 h-5"></i>
+        <span class="text-[10px] mt-1">Calendario</span>
+      </button>
+      <button onclick="switchTab('progressi')" id="nav-btn-progressi" class="flex-1 flex flex-col items-center py-1 text-slate-500 font-medium hover:text-slate-300 transition-all">
+        <i data-lucide="trending-up" class="w-5 h-5"></i>
+        <span class="text-[10px] mt-1">Progressi</span>
+      </button>
+      <button onclick="switchTab('nutrizione')" id="nav-btn-nutrizione" class="flex-1 flex flex-col items-center py-1 text-slate-500 font-medium hover:text-slate-300 transition-all">
+        <i data-lucide="apple" class="w-5 h-5"></i>
+        <span class="text-[10px] mt-1">Nutrizione</span>
+      </button>
+      <button onclick="switchTab('opzioni')" id="nav-btn-opzioni" class="flex-1 flex flex-col items-center py-1 text-slate-500 font-medium hover:text-slate-300 transition-all">
+        <i data-lucide="sliders" class="w-5 h-5"></i>
+        <span class="text-[10px] mt-1">Opzioni</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ==================== ALL MODALS & OVERLAYS ==================== -->
+
+  <!-- 1. UPGRADED YAZIO DOUBLE-WHEEL PORTION MODAL (foodPortionModal) -->
+  <div id="foodPortionModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-end sm:items-center justify-center p-0 sm:p-4 transition-opacity duration-200">
+    <div class="bg-slate-900 border border-slate-800 rounded-t-3xl sm:rounded-3xl w-full max-w-lg p-5 space-y-4 shadow-2xl max-h-[92vh] overflow-y-auto no-scrollbar">
+      
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between border-b border-slate-800/80 pb-3">
+        <div>
+          <h3 id="portionModalFoodName" class="text-base font-black text-white">Petto di Pollo</h3>
+          <p id="portionModalFoodMacrosHint" class="text-[11px] text-slate-400">100g = 110 kcal | C: 0g · P: 23g · G: 1.2g</p>
+        </div>
+        <button onclick="closeModal('foodPortionModal')" class="p-1.5 rounded-full bg-slate-800 text-slate-400 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Yazio Iconic Unit Badge Header -->
+      <div class="flex items-center justify-between bg-emerald-950/40 border border-emerald-500/30 rounded-2xl p-3">
+        <div class="flex items-center space-x-3">
+          <div id="yazioBadgeIconBox" class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
+            <i data-lucide="scale" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <div class="flex items-center space-x-2">
+              <span id="yazioBadgeUnitName" class="text-xs font-black text-white">Grammi (g)</span>
+              <span id="yazioBadgeGramEquiv" class="text-[10px] font-bold text-emerald-400 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">= 1 g</span>
+            </div>
+            <p id="yazioBadgeCalcSummary" class="text-[11px] text-slate-300 font-medium">Quantità selezionata: <strong id="yazioBadgeGramTotal" class="text-white">150 g</strong></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- CRUDO ↔ COTTO CONVERTER PILL (If food is convertible) -->
+      <div id="crudoCottoContainer" class="hidden flex p-1 bg-slate-950 border border-slate-800 rounded-xl">
+        <button id="btnStateCrudo" onclick="setCookingState('crudo')" class="flex-1 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 text-white">
+          🥩 Pesato da CRUDO
+        </button>
+        <button id="btnStateCotto" onclick="setCookingState('cotto')" class="flex-1 py-1.5 rounded-lg text-xs font-semibold text-slate-400">
+          🍳 Pesato da COTTO
+        </button>
+      </div>
+      <div id="cookingYieldNote" class="hidden text-[10px] text-center text-emerald-400 font-medium">
+        * Stima automatica da cotto: 150g cotto ≈ 100g crudo (Fattore resa resa/calore).
+      </div>
+
+      <!-- YAZIO DOUBLE-WHEEL SELECTOR AREA -->
+      <div class="bg-slate-950 border border-slate-800 rounded-2xl p-3 space-y-2">
+        <div class="grid grid-cols-12 gap-2 text-[10px] font-bold uppercase text-slate-400 px-1">
+          <span class="col-span-7">1. Scorri Unità</span>
+          <span class="col-span-5 text-right">2. Scorri Quantità</span>
+        </div>
+
+        <!-- Wheel Outer Frame with Selection Bar -->
+        <div class="relative grid grid-cols-12 gap-2 h-44 overflow-hidden rounded-xl bg-slate-900 border border-slate-800/80">
+          <!-- Selection Highlight Band -->
+          <div class="pointer-events-none absolute inset-x-1 top-[64px] h-10 border-y-2 border-emerald-500/60 bg-emerald-500/10 rounded-lg z-10"></div>
+
+          <!-- LEFT WHEEL (Unità di Misura - col-span-7) -->
+          <div id="unitWheelContainer" onscroll="handleUnitWheelScroll()" class="col-span-7 overflow-y-auto scroll-wheel no-scrollbar py-[64px] space-y-0 text-left">
+            <!-- Dynamic Unit options injected via JS -->
+          </div>
+
+          <!-- RIGHT WHEEL (Numeri / Quantità - col-span-5) -->
+          <div id="numberWheelContainer" onscroll="handleNumberWheelScroll()" class="col-span-5 overflow-y-auto scroll-wheel no-scrollbar py-[64px] space-y-0 text-center">
+            <!-- Dynamic Number options injected via JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- DIRECT NUMERIC INPUT + QUICK STEPPERS -->
+      <div class="flex items-center space-x-2">
+        <button onclick="stepQuantity(-1)" class="w-12 h-11 rounded-2xl bg-slate-800 border border-slate-700 text-lg font-bold text-slate-200 hover:bg-slate-700 flex items-center justify-center">-</button>
+        <div class="flex-1 relative">
+          <input type="number" id="portionDirectInput" inputmode="decimal" step="any" oninput="handleDirectInput(this.value)" class="w-full bg-slate-950 border border-slate-800 rounded-2xl py-2.5 px-3 text-center text-lg font-black text-emerald-400 focus:outline-none focus:border-emerald-500">
+          <span id="portionDirectUnitSuffix" class="absolute right-3 top-3 text-xs font-bold text-slate-500">g</span>
+        </div>
+        <button onclick="stepQuantity(1)" class="w-12 h-11 rounded-2xl bg-slate-800 border border-slate-700 text-lg font-bold text-slate-200 hover:bg-slate-700 flex items-center justify-center">+</button>
+      </div>
+
+      <!-- QUICK CHIPS -->
+      <div id="quickChipsContainer" class="flex gap-1.5 overflow-x-auto no-scrollbar py-1">
+        <!-- Dynamic quick chips injected via JS -->
+      </div>
+
+      <!-- VISUAL PORTION HELPER ("A occhio") -->
+      <div class="bg-slate-950/70 border border-slate-800/80 rounded-xl p-2.5 flex items-start space-x-2">
+        <i data-lucide="info" class="w-4 h-4 text-emerald-400 shrink-0 mt-0.5"></i>
+        <p id="visualPortionGuideText" class="text-[11px] text-slate-300">
+          <strong>Guida a occhio:</strong> 1 Cucchiaio rase d'olio EVO equivale a circa 10g (10ml).
+        </p>
+      </div>
+
+      <!-- MEAL SELECTION DROPDOWN & CONFIRM BUTTON -->
+      <div class="space-y-2 pt-2 border-t border-slate-800">
+        <div class="flex items-center justify-between">
+          <label class="text-xs font-bold text-slate-400">Aggiungi al Pasto:</label>
+          <select id="portionTargetMealSelect" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs font-bold text-emerald-400 focus:outline-none">
+            <option value="colazione">☕ Colazione</option>
+            <option value="pranzo">🍝 Pranzo</option>
+            <option value="cena">🥩 Cena</option>
+            <option value="spuntini">🍎 Spuntini</option>
+          </select>
+        </div>
+
+        <button onclick="confirmAddPortionToMeal()" class="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm rounded-2xl shadow-lg shadow-emerald-600/25 flex items-center justify-center gap-2">
+          <i data-lucide="check" class="w-5 h-5"></i> Conferma &amp; Aggiungi al Diario
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 2. PLATE CALCULATOR MODAL (plateCalcModal - FEATURE ADDITION 2) -->
+  <div id="plateCalcModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md p-5 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div class="flex items-center space-x-2">
+          <i data-lucide="disc" class="w-5 h-5 text-indigo-400"></i>
+          <h3 class="text-base font-bold text-white">Calcolatore Dischi &amp; Rampa</h3>
+        </div>
+        <button onclick="closeModal('plateCalcModal')" class="p-1 rounded-full bg-slate-800 text-slate-400 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Barbell Weight & Target Input -->
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Tipo Bilanciere</label>
+          <select id="plateCalcBarType" onchange="calculatePlates()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-2 text-xs font-bold text-white">
+            <option value="20">Olimpico (20 kg)</option>
+            <option value="15">Donna / Tech (15 kg)</option>
+            <option value="10">Leggero (10 kg)</option>
+            <option value="8">EZ Sagomato (8 kg)</option>
+            <option value="2">Manubrio (2 kg)</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Carico Target (kg)</label>
+          <input type="number" id="plateCalcTargetKg" value="100" step="2.5" oninput="calculatePlates()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-2 text-xs font-black text-indigo-400 text-center">
+        </div>
+      </div>
+
+      <!-- VISUAL PLATE SETUP DISPLAY PER SIDE -->
+      <div class="bg-slate-950 border border-slate-800 rounded-2xl p-4 text-center space-y-2">
+        <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Dischi da caricare PER LATO:</span>
+        <div id="plateVisualPerSide" class="flex items-center justify-center gap-1.5 min-h-[48px]">
+          <!-- Dynamic visual plates injected via JS -->
+        </div>
+        <p id="plateSummaryText" class="text-xs font-mono text-indigo-300 font-bold">25kg x 1 + 15kg x 1 per lato</p>
+      </div>
+
+      <!-- WARMUP RAMP RECOMMENDATION -->
+      <div class="bg-slate-950/70 border border-slate-800 rounded-2xl p-3 space-y-2">
+        <span class="text-xs font-bold text-slate-300 flex items-center gap-1">
+          <i data-lucide="flame" class="w-3.5 h-3.5 text-amber-400"></i> Rampa Riscaldamento Consigliata
+        </span>
+        <div id="warmupRampContainer" class="grid grid-cols-4 gap-1.5 text-center text-[11px]">
+          <!-- Dynamic Warmup Sets injected via JS -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. FOOD SEARCH / LOGGER MODAL (foodLoggerModal) -->
+  <div id="foodLoggerModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-t-3xl sm:rounded-3xl w-full max-w-lg p-5 space-y-4 shadow-2xl max-h-[90vh] flex flex-col">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="text-base font-bold text-white">Ricerca Alimenti</h3>
+        <button onclick="closeModal('foodLoggerModal')" class="p-1.5 rounded-full bg-slate-800 text-slate-400 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Search Input + Filter Tabs -->
+      <div class="space-y-2">
+        <div class="relative">
+          <input type="text" id="foodSearchInput" oninput="handleFoodSearch(this.value)" placeholder="Cerca pizza, pollo, albume, pasta..." class="w-full bg-slate-950 border border-slate-800 rounded-2xl py-2.5 pl-9 pr-4 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500">
+          <i data-lucide="search" class="w-4 h-4 text-slate-500 absolute left-3 top-3"></i>
+        </div>
+
+        <div class="flex space-x-1">
+          <button onclick="setFoodSearchFilter('all')" id="food-filter-all" class="flex-1 py-1 rounded-xl text-[11px] font-bold bg-emerald-600 text-white">Tutti</button>
+          <button onclick="setFoodSearchFilter('recent')" id="food-filter-recent" class="flex-1 py-1 rounded-xl text-[11px] font-semibold text-slate-400">Recenti</button>
+          <button onclick="setFoodSearchFilter('fav')" id="food-filter-fav" class="flex-1 py-1 rounded-xl text-[11px] font-semibold text-slate-400">Preferiti ★</button>
+        </div>
+      </div>
+
+      <!-- Food Search Results List Container -->
+      <div id="foodSearchResultsContainer" class="flex-1 overflow-y-auto no-scrollbar space-y-2 pr-1 min-h-[220px]">
+        <!-- Dynamic food search items injected via JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. BARCODE SCANNER MODAL (barcodeModal) -->
+  <div id="barcodeModal" class="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md p-5 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <i data-lucide="qr-code" class="w-5 h-5 text-emerald-400"></i> Scanner Codice a Barre
+        </h3>
+        <button onclick="closeBarcodeScannerModal()" class="p-1 rounded-full bg-slate-800 text-slate-400 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Camera Preview Box -->
+      <div id="interactiveScanner" class="w-full h-48 bg-slate-950 rounded-2xl overflow-hidden border border-slate-800 relative flex items-center justify-center">
+        <p class="text-xs text-slate-500">Inizializzazione Fotocamera...</p>
+      </div>
+
+      <!-- Manual EAN Input & Quick Samples -->
+      <div class="space-y-2">
+        <label class="text-[10px] uppercase font-bold text-slate-400 block">Oppure Inserisci Codice EAN Manualmente</label>
+        <div class="flex gap-2">
+          <input type="text" id="manualEanInput" placeholder="Es. 800123456789" class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white">
+          <button onclick="lookupEanCode(document.getElementById('manualEanInput').value)" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold">Cerca</button>
+        </div>
+        <div class="flex gap-1.5 overflow-x-auto no-scrollbar pt-1">
+          <span class="text-[10px] text-slate-500 font-semibold self-center">Test EAN:</span>
+          <button onclick="lookupEanCode('8000500003787')" class="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-[10px] font-mono text-slate-300 rounded">Nutella</button>
+          <button onclick="lookupEanCode('8000440003007')" class="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-[10px] font-mono text-slate-300 rounded">Estathé</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. EXERCISE PICKER MODAL (exercisePickerModal) -->
+  <div id="exercisePickerModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-t-3xl sm:rounded-3xl w-full max-w-lg p-5 space-y-4 shadow-2xl max-h-[85vh] flex flex-col">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="text-base font-bold text-white">Seleziona Esercizio</h3>
+        <button onclick="closeModal('exercisePickerModal')" class="p-1 rounded-full bg-slate-800 text-slate-400 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <input type="text" id="exerciseSearchInput" oninput="filterExercisePicker(this.value)" placeholder="Cerca panca, squat, stacco, trazioni..." class="w-full bg-slate-950 border border-slate-800 rounded-2xl py-2.5 px-3.5 text-xs text-white focus:outline-none focus:border-blue-500">
+
+      <div id="exercisePickerList" class="flex-1 overflow-y-auto no-scrollbar space-y-2 min-h-[220px]">
+        <!-- Dynamic Exercises List injected via JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. QUICK ADD MACRO MODAL (quickAddMacroModal - FEATURE ADDITION 7) -->
+  <div id="quickAddMacroModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md p-5 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <i data-lucide="zap" class="w-5 h-5 text-amber-400"></i> Aggiunta Rapida Calorie &amp; Macro
+        </h3>
+        <button onclick="closeModal('quickAddMacroModal')" class="p-1 rounded-full bg-slate-800 text-slate-400 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="space-y-3">
+        <div>
+          <label class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Nome Voce / Pasto fuori casa</label>
+          <input type="text" id="quickAddName" value="Pasto Rapido / Ristorante" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white">
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Kcal Totali *</label>
+            <input type="number" id="quickAddKcal" value="500" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-black text-amber-400">
+          </div>
+          <div>
+            <label class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Pasto Destinazione</label>
+            <select id="quickAddMeal" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-2 text-xs font-bold text-white">
+              <option value="colazione">☕ Colazione</option>
+              <option value="pranzo" selected>🍝 Pranzo</option>
+              <option value="cena">🥩 Cena</option>
+              <option value="spuntini">🍎 Spuntini</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-3 gap-2">
+          <div>
+            <label class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Carbo (g)</label>
+            <input type="number" id="quickAddCarbs" value="50" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-2 py-1.5 text-xs text-emerald-400 font-bold text-center">
+          </div>
+          <div>
+            <label class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Proteine (g)</label>
+            <input type="number" id="quickAddProtein" value="30" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-2 py-1.5 text-xs text-blue-400 font-bold text-center">
+          </div>
+          <div>
+            <label class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Grassi (g)</label>
+            <input type="number" id="quickAddFat" value="15" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-2 py-1.5 text-xs text-amber-400 font-bold text-center">
+          </div>
+        </div>
+      </div>
+
+      <button onclick="confirmQuickAddMacro()" class="w-full py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs rounded-2xl shadow-lg shadow-amber-500/20">
+        Inserisci nel Diario
+      </button>
+    </div>
+  </div>
+
+  <!-- 7. BODY PROFILE MODAL (bodyProfileModal) -->
+  <div id="bodyProfileModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md p-5 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="text-base font-bold text-white">Profilo Corporeo &amp; Obiettivi</h3>
+        <button onclick="closeModal('bodyProfileModal')" class="p-1 rounded-full bg-slate-800 text-slate-400 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-slate-400 font-medium block mb-1">Peso Corporeo (kg)</label>
+            <input type="number" id="profileWeightInput" step="0.1" value="78.5" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 font-bold text-white">
+          </div>
+          <div>
+            <label class="text-slate-400 font-medium block mb-1">Altezza (cm)</label>
+            <input type="number" id="profileHeightInput" value="178" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 font-bold text-white">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-slate-400 font-medium block mb-1">Età (anni)</label>
+            <input type="number" id="profileAgeInput" value="25" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 font-bold text-white">
+          </div>
+          <div>
+            <label class="text-slate-400 font-medium block mb-1">Sesso</label>
+            <select id="profileGenderInput" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 font-bold text-white">
+              <option value="male">Uomo M</option>
+              <option value="female">Donna F</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="text-slate-400 font-medium block mb-1">Obiettivo Calorico Base</label>
+          <select id="profileGoalInput" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 font-bold text-white">
+            <option value="surplus">Massa / Surplus (+300 kcal)</option>
+            <option value="maintenance">Mantenimento (TDEE)</option>
+            <option value="deficit">Deficit / Definizione (-400 kcal)</option>
+          </select>
+        </div>
+      </div>
+
+      <button onclick="saveBodyProfile()" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-2xl shadow-lg">
+        Salva e Ricalcola Target
+      </button>
+    </div>
+  </div>
+
+  <!-- 8. EDIT HISTORY WORKOUT MODAL (editHistoryModal) -->
+  <div id="editHistoryModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-lg p-5 space-y-4 shadow-2xl max-h-[85vh] overflow-y-auto no-scrollbar">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="text-base font-bold text-white">Modifica Sessione Storico</h3>
+        <button onclick="closeModal('editHistoryModal')" class="p-1 rounded-full bg-slate-800 text-slate-400 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <div id="editHistoryContent" class="space-y-3">
+        <!-- Dynamic History editor injected via JS -->
+      </div>
+      <button onclick="saveHistoryEdits()" class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-2xl shadow-lg">
+        Salva Modifiche Sessione
+      </button>
+    </div>
+  </div>
+
+  <!-- 9. ROUTINE MANAGER MODAL (routineManagerModal) -->
+  <div id="routineManagerModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md p-5 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="text-base font-bold text-white">Gestore Schede Routine</h3>
+        <button onclick="closeModal('routineManagerModal')" class="p-1 rounded-full bg-slate-800 text-slate-400 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <div id="routineManagerList" class="space-y-2 max-h-60 overflow-y-auto no-scrollbar">
+        <!-- Dynamic routines injected via JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- 10. EXERCISE LIBRARY MODAL (exerciseLibraryModal) -->
+  <div id="exerciseLibraryModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md p-5 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="text-base font-bold text-white">Libreria Esercizi</h3>
+        <button onclick="closeModal('exerciseLibraryModal')" class="p-1 rounded-full bg-slate-800 text-slate-400 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="space-y-2">
+        <input type="text" id="newCustomExName" placeholder="Nome Esercizio (es. Leg Press)" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white">
+        <div class="grid grid-cols-2 gap-2">
+          <select id="newCustomExCat" class="bg-slate-950 border border-slate-800 rounded-xl px-2 py-2 text-xs font-bold text-white">
+            <option value="Petto">Petto</option>
+            <option value="Dorso">Dorso</option>
+            <option value="Gambe">Gambe</option>
+            <option value="Spalle">Spalle</option>
+            <option value="Bicipiti">Bicipiti</option>
+            <option value="Tricipiti">Tricipiti</option>
+            <option value="Core">Core</option>
+          </select>
+          <button onclick="addNewCustomExercise()" class="bg-blue-600 hover:bg-blue-500 font-bold text-xs text-white rounded-xl py-2">+ Crea Esercizio</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 11. CREATE / EDIT RECIPE MODAL (createRecipeModal) -->
+  <div id="createRecipeModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md p-5 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="text-base font-bold text-white">Crea / Modifica Ricetta</h3>
+        <button onclick="closeModal('createRecipeModal')" class="p-1 rounded-full bg-slate-800 text-slate-400 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <div class="space-y-2">
+        <input type="text" id="recipeNameInput" placeholder="Nome Ricetta (es. Porridge Avena e Proteine)" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white">
+        <div class="grid grid-cols-4 gap-2">
+          <input type="number" id="recipeKcalInput" placeholder="Kcal" class="bg-slate-950 border border-slate-800 rounded-xl px-2 py-2 text-xs font-bold text-amber-400 text-center">
+          <input type="number" id="recipeCarbsInput" placeholder="Carbo g" class="bg-slate-950 border border-slate-800 rounded-xl px-2 py-2 text-xs font-bold text-emerald-400 text-center">
+          <input type="number" id="recipeProtInput" placeholder="Prot g" class="bg-slate-950 border border-slate-800 rounded-xl px-2 py-2 text-xs font-bold text-blue-400 text-center">
+          <input type="number" id="recipeFatInput" placeholder="Fat g" class="bg-slate-950 border border-slate-800 rounded-xl px-2 py-2 text-xs font-bold text-amber-400 text-center">
+        </div>
+      </div>
+      <button onclick="saveRecipe()" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 font-bold text-xs text-white rounded-2xl shadow-lg">Salva Ricetta</button>
+    </div>
+  </div>
+
+  <!-- 12. CALENDAR LEGEND MODAL (calendarLegendModal) -->
+  <div id="calendarLegendModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-xs p-4 space-y-3 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+        <h3 class="text-xs font-bold text-white">Legenda Colori Routine</h3>
+        <button onclick="closeModal('calendarLegendModal')" class="p-1 rounded-full text-slate-400 hover:text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
+      </div>
+      <div class="space-y-2 text-xs">
+        <div class="flex items-center space-x-2"><span class="w-3 h-3 rounded-full bg-blue-500"></span><span class="text-slate-300">Spinta / Panca</span></div>
+        <div class="flex items-center space-x-2"><span class="w-3 h-3 rounded-full bg-emerald-500"></span><span class="text-slate-300">Tirata / Stacco</span></div>
+        <div class="flex items-center space-x-2"><span class="w-3 h-3 rounded-full bg-amber-500"></span><span class="text-slate-300">Gambe / Squat</span></div>
+        <div class="flex items-center space-x-2"><span class="w-3 h-3 rounded-full bg-purple-500"></span><span class="text-slate-300">Esplosività / Full Body</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 13. ADD SUPPLEMENT MODAL (addSupplementModal) -->
+  <div id="addSupplementModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-xs p-5 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+          <i data-lucide="pill" class="w-4 h-4 text-purple-400"></i> Nuovo Integratore
+        </h3>
+        <button onclick="closeModal('addSupplementModal')" class="p-1 rounded-full bg-slate-800 text-slate-400 hover:text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
+      </div>
+      <div class="space-y-2.5">
+        <input type="text" id="newSupplementName" placeholder="Es. Caffeina, Beta-Alanina..." class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500">
+        <input type="text" id="newSupplementDose" placeholder="Dose (es. 200mg, 1 cp)" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500">
+      </div>
+      <button onclick="confirmAddSupplement()" class="w-full py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs rounded-2xl">Aggiungi Integratore</button>
+    </div>
+  </div>
+
+  <!-- 14. SAVE NEW ROUTINE MODAL (saveRoutineModal) -->
+  <div id="saveRoutineModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-xs p-5 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+          <i data-lucide="bookmark-plus" class="w-4 h-4 text-purple-400"></i> Salva come Routine
+        </h3>
+        <button onclick="closeModal('saveRoutineModal')" class="p-1 rounded-full bg-slate-800 text-slate-400 hover:text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
+      </div>
+      <div class="space-y-2.5">
+        <input type="text" id="newRoutineNameInput" placeholder="Nome scheda (es. Upper Body B)" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500">
+      </div>
+      <button onclick="confirmSaveNewRoutine()" class="w-full py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs rounded-2xl">Salva Scheda</button>
+    </div>
+  </div>
+
+  <!-- 15. CUSTOM CONFIRMATION MODAL (customConfirmModal) -->
+  <div id="customConfirmModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-xs p-5 space-y-4 text-center shadow-2xl">
+      <h3 id="customConfirmTitle" class="text-sm font-bold text-white">Conferma</h3>
+      <p id="customConfirmMessage" class="text-xs text-slate-400"></p>
+      <div class="flex gap-2">
+        <button onclick="closeModal('customConfirmModal')" class="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs rounded-xl">Annulla</button>
+        <button id="customConfirmActionBtn" class="flex-1 py-2.5 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-xl">Conferma</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION FLOATER -->
+  <div id="toastNotification" class="fixed top-16 left-1/2 transform -translate-x-1/2 z-50 hidden bg-slate-900/95 border border-emerald-500/50 text-emerald-400 px-4 py-2.5 rounded-2xl shadow-xl ios-blur flex items-center space-x-2 text-xs font-bold">
+    <i data-lucide="check-circle" class="w-4 h-4"></i>
+    <span id="toastMessage">Operazione completata!</span>
+  </div>
+
+  <!-- ==================== APPLICATION SCRIPT LOGIC ==================== -->
+  <script>
+    /* ==================== 1. DEFAULT DATASETS ==================== */
+    const DEFAULT_EXERCISES = [
+      { id: 'ex_panca', name: 'Panca Piana Bilanciere', category: 'Petto', isBodyweight: false },
+      { id: 'ex_inclinata', name: 'Panca Inclinata Manubri', category: 'Petto', isBodyweight: false },
+      { id: 'ex_croci', name: 'Croci ai Cavi High-to-Low', category: 'Petto', isBodyweight: false },
+      { id: 'ex_trazioni', name: 'Trazioni alla Sbarra', category: 'Dorso', isBodyweight: true },
+      { id: 'ex_rematore', name: 'Rematore Bilanciere', category: 'Dorso', isBodyweight: false },
+      { id: 'ex_latpull', name: 'Lat Machine Presa Larga', category: 'Dorso', isBodyweight: false },
+      { id: 'ex_squat', name: 'Squat Bilanciere', category: 'Gambe', isBodyweight: false },
+      { id: 'ex_stacco', name: 'Stacco da Terra (Deadlift)', category: 'Gambe', isBodyweight: false },
+      { id: 'ex_pressa', name: 'Leg Press 45°', category: 'Gambe', isBodyweight: false },
+      { id: 'ex_ohp', name: 'Military Press (OHP)', category: 'Spalle', isBodyweight: false },
+      { id: 'ex_alzatelat', name: 'Alzate Laterali Manubri', category: 'Spalle', isBodyweight: false },
+      { id: 'ex_curl', name: 'Curl Bicipiti Bilanciere EZ', category: 'Bicipiti', isBodyweight: false },
+      { id: 'ex_french', name: 'French Press Panca Piana', category: 'Tricipiti', isBodyweight: false },
+      { id: 'ex_pushdown', name: 'Pushdown Tricipiti Cavo', category: 'Tricipiti', isBodyweight: false }
+    ];
+
+    const DEFAULT_ROUTINES = [
+      {
+        id: 'routine_spinta',
+        name: 'Giorno A — Spinta (Push)',
+        color: 'bg-blue-500',
+        exercises: [
+          { exerciseId: 'ex_panca', sets: [{ targetReps: 8, repsDone: 8, load: 80, isSuperset: false }, { targetReps: 8, repsDone: 8, load: 80, isSuperset: false }, { targetReps: 8, repsDone: 8, load: 85, isSuperset: false }] },
+          { exerciseId: 'ex_ohp', sets: [{ targetReps: 10, repsDone: 10, load: 45, isSuperset: false }, { targetReps: 10, repsDone: 10, load: 45, isSuperset: false }] },
+          { exerciseId: 'ex_inclinata', sets: [{ targetReps: 10, repsDone: 10, load: 26, isSuperset: true }, { targetReps: 10, repsDone: 10, load: 26, isSuperset: true }] },
+          { exerciseId: 'ex_alzatelat', sets: [{ targetReps: 15, repsDone: 15, load: 12, isSuperset: true }, { targetReps: 15, repsDone: 15, load: 12, isSuperset: true }] }
+        ]
+      },
+      {
+        id: 'routine_tirata',
+        name: 'Giorno C — Tirata (Pull)',
+        color: 'bg-emerald-500',
+        exercises: [
+          { exerciseId: 'ex_stacco', sets: [{ targetReps: 5, repsDone: 5, load: 130, isSuperset: false }, { targetReps: 5, repsDone: 5, load: 140, isSuperset: false }] },
+          { exerciseId: 'ex_trazioni', sets: [{ targetReps: 8, repsDone: 8, load: 0, isSuperset: false }, { targetReps: 8, repsDone: 8, load: 0, isSuperset: false }] },
+          { exerciseId: 'ex_rematore', sets: [{ targetReps: 10, repsDone: 10, load: 65, isSuperset: false }] },
+          { exerciseId: 'ex_curl', sets: [{ targetReps: 12, repsDone: 12, load: 30, isSuperset: false }] }
+        ]
+      },
+      {
+        id: 'routine_gambe',
+        name: 'Giorno B — Gambe & Core',
+        color: 'bg-amber-500',
+        exercises: [
+          { exerciseId: 'ex_squat', sets: [{ targetReps: 6, repsDone: 6, load: 110, isSuperset: false }, { targetReps: 6, repsDone: 6, load: 115, isSuperset: false }] },
+          { exerciseId: 'ex_pressa', sets: [{ targetReps: 12, repsDone: 12, load: 180, isSuperset: false }] }
+        ]
+      },
+      {
+        id: 'routine_esplosivita',
+        name: 'Giorno D — Esplosività & Full',
+        color: 'bg-purple-500',
+        exercises: [
+          { exerciseId: 'ex_panca', sets: [{ targetReps: 5, repsDone: 5, load: 70, isSuperset: false }] },
+          { exerciseId: 'ex_trazioni', sets: [{ targetReps: 6, repsDone: 6, load: 5, isSuperset: false }] }
+        ]
+      }
+    ];
+
+    const STRETCH_ITEMS = [
+      { id: 'st1', name: 'Cane a Faccia in Giù (Hamstrings & Dorso)', duration: '60s' },
+      { id: 'st2', name: 'Apertura Toracica al Muro', duration: '45s x lato' },
+      { id: 'st3', name: 'Stretching Psoas e Flessori Anca', duration: '60s x lato' },
+      { id: 'st4', name: 'Decompressione Spinale alla Sbarra', duration: '90s' },
+      { id: 'st5', name: 'Posizione del Bambino (Child’s Pose)', duration: '60s' }
+    ];
+
+    const DEFAULT_FOODS = [
+      { id: 'f1', name: 'Petto di Pollo (Crudo)', calories: 110, carbs: 0, protein: 23, fat: 1.2, defaultUnit: 'g', isConvertible: true, cookedYieldFactor: 0.75, category: 'Carne' },
+      { id: 'f2', name: 'Olio Extravergine d\'Oliva EVO', calories: 884, carbs: 0, protein: 0, fat: 100, defaultUnit: 'cucchiaio', isConvertible: false, category: 'Condimento' },
+      { id: 'f3', name: 'Riso Basmati (Crudo)', calories: 350, carbs: 78, protein: 7.5, fat: 0.6, defaultUnit: 'g', isConvertible: true, cookedYieldFactor: 2.8, category: 'Cereali' },
+      { id: 'f4', name: 'Pasta Integrale (Cruda)', calories: 348, carbs: 65, protein: 13, fat: 2.5, defaultUnit: 'g', isConvertible: true, cookedYieldFactor: 2.3, category: 'Cereali' },
+      { id: 'f5', name: 'Uovo Intero Grande', calories: 143, carbs: 0.7, protein: 12.6, fat: 9.5, defaultUnit: 'pezzo', isConvertible: false, category: 'Uova' },
+      { id: 'f6', name: 'Albume d\'Uovo', calories: 52, carbs: 0.7, protein: 11, fat: 0.2, defaultUnit: 'ml', isConvertible: false, category: 'Uova' },
+      { id: 'f7', name: 'Fiocchi d\'Avena Integrali', calories: 375, carbs: 60, protein: 13.5, fat: 7.0, defaultUnit: 'g', isConvertible: false, category: 'Cereali' },
+      { id: 'f8', name: 'Banana Fresca', calories: 89, carbs: 22.8, protein: 1.1, fat: 0.3, defaultUnit: 'pezzo', isConvertible: false, category: 'Frutta' },
+      { id: 'f9', name: 'Cioccolato Fondente 85%', calories: 580, carbs: 20, protein: 8.8, fat: 46, defaultUnit: 'quadretto', isConvertible: false, category: 'Dolci' },
+      { id: 'f10', name: 'Bevanda di Soia Senza Zuccheri', calories: 33, carbs: 0.2, protein: 3.3, fat: 1.8, defaultUnit: 'ml', isConvertible: false, category: 'Bevande' },
+      { id: 'f11', name: 'Fiocchi di Latte 4.5%', calories: 98, carbs: 3.3, protein: 12.5, fat: 4.5, defaultUnit: 'vasetto', isConvertible: false, category: 'Latticini' },
+      { id: 'f12', name: 'Marmellata 100% Frutta', calories: 160, carbs: 38, protein: 0.5, fat: 0.1, defaultUnit: 'cucchiaino', isConvertible: false, category: 'Dolci' }
+    ];
+
+    const UNIT_DEFINITIONS = [
+      { id: 'g', label: 'Grammi (g)', icon: 'scale', gramEquiv: 1, type: 'weight' },
+      { id: 'kg', label: 'Chilogrammi (kg)', icon: 'weight', gramEquiv: 1000, type: 'weight' },
+      { id: 'ml', label: 'Millilitri (ml)', icon: 'droplet', gramEquiv: 1, type: 'volume' },
+      { id: 'cl', label: 'Centilitri (cl)', icon: 'droplet', gramEquiv: 10, type: 'volume' },
+      { id: 'L', label: 'Litri (L)', icon: 'container', gramEquiv: 1000, type: 'volume' },
+      { id: 'cucchiaino', label: 'Cucchiaino', icon: 'utensils', gramEquiv: 4.5, type: 'household' },
+      { id: 'cucchiaio', label: 'Cucchiaio', icon: 'utensils-crossed', gramEquiv: 10, type: 'household' },
+      { id: 'pizzico', label: 'Pizzico', icon: 'sparkle', gramEquiv: 1, type: 'household' },
+      { id: 'manciata', label: 'Manciata', icon: 'hand', gramEquiv: 30, type: 'household' },
+      { id: 'mestolo', label: 'Mestolo', icon: 'soup', gramEquiv: 120, type: 'household' },
+      { id: 'misurino', label: 'Misurino Scoop', icon: 'box', gramEquiv: 30, type: 'household' },
+      { id: 'pezzo', label: 'Pezzo / Unità', icon: 'circle-dot', gramEquiv: 60, type: 'discrete' },
+      { id: 'fetta', label: 'Fetta', icon: 'slice', gramEquiv: 35, type: 'discrete' },
+      { id: 'quadretto', label: 'Quadretto', icon: 'square', gramEquiv: 10, type: 'discrete' },
+      { id: 'bicchiere', label: 'Bicchiere', icon: 'glass-water', gramEquiv: 200, type: 'volume' },
+      { id: 'tazza', label: 'Tazza', icon: 'cup-soda', gramEquiv: 250, type: 'volume' },
+      { id: 'vasetto', label: 'Vasetto', icon: 'package-check', gramEquiv: 150, type: 'container' },
+      { id: 'scatoletta', label: 'Scatoletta', icon: 'box-select', gramEquiv: 80, type: 'container' },
+      { id: 'barattolo', label: 'Barattolo', icon: 'archive', gramEquiv: 400, type: 'container' },
+      { id: 'porzione', label: 'Porzione media', icon: 'pie-chart', gramEquiv: 150, type: 'discrete' }
+    ];
+
+    const DEFAULT_RECIPES = [
+      { id: 'rec_porridge', name: 'Porridge Proteico Avena & Frutti di Bosco', calories: 420, carbs: 55, protein: 32, fat: 8, totalServings: 2 },
+      { id: 'rec_pasta_pollo', name: 'Meal Prep Pasta Integrale, Pollo & Pesto', calories: 650, carbs: 70, protein: 48, fat: 16, totalServings: 4 }
+    ];
+
+    const DEFAULT_SHOPPING_LIST = [
+      { id: 'shop_1', name: 'Petto di Pollo 1kg', price: 9.50, checked: true },
+      { id: 'shop_2', name: 'Fiocchi d\'Avena 500g', price: 1.80, checked: true },
+      { id: 'shop_3', name: 'Albume d\'Uovo 1L', price: 2.60, checked: false },
+      { id: 'shop_4', name: 'Olio EVO 1L', price: 8.90, checked: true },
+      { id: 'shop_5', name: 'Feta Greca DOP', price: 2.20, checked: false }
+    ];
+
+    /* ==================== 2. GLOBAL APP STATE ==================== */
+    let appState = {
+      activeTab: 'allenamento',
+      workoutSubTab: 'pesi',
+      nutritionSubTab: 'diario',
+      calendarView: 'week', // week, month, year
+      calendarOffset: 0,
+      selectedDateStr: getTodayStr(),
+      strengthChartMode: 'all', // all, avg_max, volume
+      foodSearchFilter: 'all', // all, recent, fav
+      editingHistoryId: null,
+      favoriteFoods: JSON.parse(localStorage.getItem('ironos_fav_foods')) || ['f1', 'f2', 'f5'],
+      recentFoods: JSON.parse(localStorage.getItem('ironos_recent_foods')) || ['f1', 'f3'],
+
+      // User Profile & Macro Settings
+      profile: {
+        weight: 78.5,
+        height: 178,
+        age: 25,
+        gender: 'male',
+        goal: 'surplus' // surplus (+300), maintenance, deficit (-400)
+      },
+
+      // Workout State
+      routines: JSON.parse(localStorage.getItem('ironos_routines')) || DEFAULT_ROUTINES,
+      exercises: JSON.parse(localStorage.getItem('ironos_exercises')) || DEFAULT_EXERCISES,
+      activeWorkout: JSON.parse(localStorage.getItem('ironos_active_workout')) || null,
+      historyWorkouts: JSON.parse(localStorage.getItem('ironos_history_workouts')) || [],
+      
+      // Timer State
+      restTimer: {
+        secondsLeft: 0,
+        timerInterval: null,
+        autoStartOnSetCheck: true
+      },
+
+      // Nutrition State
+      foods: JSON.parse(localStorage.getItem('ironos_foods')) || DEFAULT_FOODS,
+      recipes: JSON.parse(localStorage.getItem('ironos_recipes')) || DEFAULT_RECIPES,
+      shoppingList: JSON.parse(localStorage.getItem('ironos_shopping')) || DEFAULT_SHOPPING_LIST,
+      nutritionLogs: JSON.parse(localStorage.getItem('ironos_nutrition_logs')) || {},
+      
+      // Hydration, Readiness, Supplements & Fasting State
+      hydrationLogs: JSON.parse(localStorage.getItem('ironos_hydration')) || {},
+      readinessLogs: JSON.parse(localStorage.getItem('ironos_readiness')) || {},
+      supplementLogs: JSON.parse(localStorage.getItem('ironos_supplements')) || {},
+      fastingState: JSON.parse(localStorage.getItem('ironos_fasting')) || {
+        preset: '16:8',
+        startTime: null,
+        isRunning: false
+      },
+
+      // Weight Tracker History
+      weightLogs: JSON.parse(localStorage.getItem('ironos_weight_logs')) || [
+        { date: '2026-11-15', weight: 79.2 },
+        { date: '2026-11-17', weight: 78.9 },
+        { date: '2026-11-19', weight: 78.6 },
+        { date: '2026-11-21', weight: 78.5 }
+      ]
+    };
+
+    // Yazio Double Wheel Modal Transient State
+    let activePortionState = {
+      food: null,
+      unit: null,
+      quantity: 100,
+      cookingState: 'crudo', // 'crudo' or 'cotto'
+      targetMeal: 'pranzo',
+      selectedUnitIndex: 0,
+      selectedNumberIndex: 0,
+      numberList: []
+    };
+
+    /* ==================== 3. INITIALIZATION & LIFECYCLE ==================== */
+    window.onload = function() {
+      // Ensure current date log entry exists
+      initTodayLog();
+      
+      // Render Initial Headers and Views
+      renderHeaderActions();
+      renderActiveWorkoutView();
+      renderNutritionDiaryView();
+      renderCalendarView();
+      renderProgressView();
+      renderStretchingList();
+
+      // Start Intermittent Fasting Interval
+      startFastingInterval();
+
+      // Start Guided Breathing Loop for Mobility tab
+      startBreathingAnimation();
+
+      // Initialize Lucide Icons
+      lucide.createIcons();
+    };
+
+    function saveStateToLocalStorage() {
+      localStorage.setItem('ironos_routines', JSON.stringify(appState.routines));
+      localStorage.setItem('ironos_exercises', JSON.stringify(appState.exercises));
+      localStorage.setItem('ironos_active_workout', JSON.stringify(appState.activeWorkout));
+      localStorage.setItem('ironos_history_workouts', JSON.stringify(appState.historyWorkouts));
+      localStorage.setItem('ironos_foods', JSON.stringify(appState.foods));
+      localStorage.setItem('ironos_recipes', JSON.stringify(appState.recipes));
+      localStorage.setItem('ironos_shopping', JSON.stringify(appState.shoppingList));
+      localStorage.setItem('ironos_nutrition_logs', JSON.stringify(appState.nutritionLogs));
+      localStorage.setItem('ironos_hydration', JSON.stringify(appState.hydrationLogs));
+      localStorage.setItem('ironos_readiness', JSON.stringify(appState.readinessLogs));
+      localStorage.setItem('ironos_supplements', JSON.stringify(appState.supplementLogs));
+      localStorage.setItem('ironos_fasting', JSON.stringify(appState.fastingState));
+      localStorage.setItem('ironos_weight_logs', JSON.stringify(appState.weightLogs));
+      localStorage.setItem('ironos_fav_foods', JSON.stringify(appState.favoriteFoods));
+      localStorage.setItem('ironos_recent_foods', JSON.stringify(appState.recentFoods));
+    }
+
+    function getTodayStr() {
+      const d = new Date();
+      return d.toISOString().split('T')[0];
+    }
+
+    function initTodayLog(targetDateStr) {
+      const dateKey = targetDateStr || getTodayStr();
+      if (!appState.nutritionLogs[dateKey]) {
+        appState.nutritionLogs[dateKey] = {
+          sportHours: 1.0,
+          uniHours: 4.0,
+          meals: { colazione: [], pranzo: [], cena: [], spuntini: [] }
+        };
+      }
+      if (appState.hydrationLogs[dateKey] === undefined) appState.hydrationLogs[dateKey] = dateKey === getTodayStr() ? 1750 : 0;
+      if (!appState.readinessLogs[dateKey]) {
+        appState.readinessLogs[dateKey] = { sleep: 7.5, energy: 8, doms: 2, score: 88 };
+      }
+      if (!appState.supplementLogs[dateKey]) {
+        appState.supplementLogs[dateKey] = [
+          { name: 'Creatina Monoidrata', dose: '5g', taken: false },
+          { name: 'Vitamina D3 2000 UI', dose: '1 cp', taken: false },
+          { name: 'Omega-3 (EPA/DHA)', dose: '2 cp', taken: false },
+          { name: 'Magnesio Bisglicinato', dose: '400mg', taken: false }
+        ];
+      }
+    }
+
+    function showToast(msg) {
+      const el = document.getElementById('toastNotification');
+      document.getElementById('toastMessage').innerText = msg;
+      el.classList.remove('hidden');
+      setTimeout(() => el.classList.add('hidden'), 2800);
+    }
+
+    /* ==================== 4. TAB NAVIGATION & HEADER ACTIONS ==================== */
+    function switchTab(tabId) {
+      appState.activeTab = tabId;
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+
+      // Update Nav Bar highlights
+      ['allenamento', 'calendario', 'progressi', 'nutrizione', 'opzioni'].forEach(t => {
+        const btn = document.getElementById(`nav-btn-${t}`);
+        if (t === tabId) {
+          btn.className = 'flex-1 flex flex-col items-center py-1 font-bold text-blue-400 transition-all';
+        } else {
+          btn.className = 'flex-1 flex flex-col items-center py-1 font-medium text-slate-500 hover:text-slate-300 transition-all';
+        }
+      });
+
+      renderHeaderActions();
+      if (tabId === 'calendario') renderCalendarView();
+      if (tabId === 'progressi') renderProgressView();
+      if (tabId === 'nutrizione') renderNutritionDiaryView();
+      lucide.createIcons();
+    }
+
+    function switchWorkoutSubTab(sub) {
+      appState.workoutSubTab = sub;
+      if (sub === 'pesi') {
+        document.getElementById('subtab-pesi-content').classList.remove('hidden');
+        document.getElementById('subtab-mobilita-content').classList.add('hidden');
+        document.getElementById('subtab-btn-pesi').className = 'flex-1 py-2 rounded-xl text-xs font-bold transition-all bg-blue-600 text-white shadow-md';
+        document.getElementById('subtab-btn-mobilita').className = 'flex-1 py-2 rounded-xl text-xs font-semibold transition-all text-slate-400 hover:text-slate-200';
+      } else {
+        document.getElementById('subtab-pesi-content').classList.add('hidden');
+        document.getElementById('subtab-mobilita-content').classList.remove('hidden');
+        document.getElementById('subtab-btn-mobilita').className = 'flex-1 py-2 rounded-xl text-xs font-bold transition-all bg-blue-600 text-white shadow-md';
+        document.getElementById('subtab-btn-pesi').className = 'flex-1 py-2 rounded-xl text-xs font-semibold transition-all text-slate-400 hover:text-slate-200';
+      }
+      lucide.createIcons();
+    }
+
+    function switchNutritionSubTab(sub) {
+      appState.nutritionSubTab = sub;
+      ['diario', 'vitamine', 'ricette', 'spesa'].forEach(s => {
+        const btn = document.getElementById(`nutri-subtab-${s}`);
+        const content = document.getElementById(`nutri-subtab-${s}-content`);
+        if (s === sub) {
+          btn.className = 'flex-1 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 text-white shadow-md';
+          content.classList.remove('hidden');
+        } else {
+          btn.className = 'flex-1 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200';
+          content.classList.add('hidden');
+        }
+      });
+      if (sub === 'vitamine') renderMicronutrientsView();
+      if (sub === 'ricette') renderRecipesView();
+      if (sub === 'spesa') renderShoppingView();
+      lucide.createIcons();
+    }
+
+    function renderHeaderActions() {
+      const container = document.getElementById('headerActions');
+      const badge = document.getElementById('sessionStatusBadge');
+
+      if (appState.activeWorkout) {
+        badge.classList.remove('hidden');
+      } else {
+        badge.classList.add('hidden');
+      }
+
+      if (appState.activeTab === 'allenamento') {
+        container.innerHTML = `
+          <button onclick="completeAndSaveWorkout()" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold flex items-center gap-1 shadow-sm">
+            <i data-lucide="check-circle" class="w-3.5 h-3.5"></i> Salva
+          </button>
+        `;
+      } else if (appState.activeTab === 'nutrizione') {
+        container.innerHTML = `
+          <div onclick="openBodyProfileModal()" class="cursor-pointer px-2.5 py-1 rounded-xl bg-slate-900 border border-slate-800 flex items-center space-x-1.5 text-xs text-slate-300">
+            <i data-lucide="scale" class="w-3.5 h-3.5 text-emerald-400"></i>
+            <span class="font-bold">${appState.profile.weight} kg</span>
+          </div>
+          <button onclick="openBarcodeScannerModal()" class="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white">
+            <i data-lucide="qr-code" class="w-4 h-4 text-emerald-400"></i>
+          </button>
+        `;
+      } else {
+        container.innerHTML = `<span class="text-xs font-semibold text-slate-500">${new Date().toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' })}</span>`;
+      }
+      lucide.createIcons();
+    }
+
+    /* ==================== 5. WORKOUT & ROUTINE LOGIC ==================== */
+    function renderActiveWorkoutView() {
+      // 1. Render Routine Pills
+      const pillsContainer = document.getElementById('routinePillsContainer');
+      pillsContainer.innerHTML = appState.routines.map(r => {
+        const isActive = appState.activeWorkout && appState.activeWorkout.routineId === r.id;
+        return `
+          <button onclick="loadRoutineIntoActive('${r.id}')" class="px-3.5 py-2 rounded-xl text-xs font-bold shrink-0 transition-all ${isActive ? 'bg-blue-600 text-white shadow-md ring-2 ring-blue-400' : 'bg-slate-900 border border-slate-800 text-slate-300 hover:bg-slate-800'} flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full ${r.color}"></span> ${r.name}
+          </button>
+        `;
+      }).join('');
+
+      // 2. Render Active Workout Exercises
+      const exContainer = document.getElementById('workoutExercisesContainer');
+      if (!appState.activeWorkout || appState.activeWorkout.exercises.length === 0) {
+        exContainer.innerHTML = `
+          <div class="bg-slate-900/60 border border-dashed border-slate-800 rounded-3xl p-8 text-center space-y-3">
+            <div class="w-12 h-12 rounded-2xl bg-blue-500/10 text-blue-400 flex items-center justify-center mx-auto">
+              <i data-lucide="dumbbell" class="w-6 h-6"></i>
+            </div>
+            <div>
+              <p class="text-xs font-bold text-white">Nessun Allenamento Attivo</p>
+              <p class="text-[11px] text-slate-400">Seleziona una scheda in alto o aggiungi un esercizio per iniziare.</p>
+            </div>
+          </div>
+        `;
+        updateLiveWorkoutMetrics();
+        return;
+      }
+
+      exContainer.innerHTML = appState.activeWorkout.exercises.map((exItem, exIdx) => {
+        const exDef = appState.exercises.find(e => e.id === exItem.exerciseId) || { name: 'Esercizio', isBodyweight: false };
+        
+        return `
+          <div class="bg-slate-900 border border-slate-800 rounded-3xl p-4 space-y-3 shadow-sm">
+            <!-- Exercise Card Header -->
+            <div class="flex items-center justify-between border-b border-slate-800/80 pb-2.5">
+              <div class="flex items-center space-x-2">
+                <span class="text-xs font-mono font-bold text-slate-500">#${exIdx + 1}</span>
+                <h4 class="text-sm font-black text-white">${exDef.name}</h4>
+                ${exDef.isBodyweight ? '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">Corpo Libero</span>' : ''}
+              </div>
+              <div class="flex items-center space-x-1">
+                <!-- Plate Calc Quick Button on Exercise Card -->
+                ${!exDef.isBodyweight ? `
+                  <button onclick="openPlateCalculatorModalForEx(${exItem.sets[0]?.load || 60})" class="p-1.5 text-indigo-400 hover:bg-slate-800 rounded-lg" title="Calcola dischi">
+                    <i data-lucide="disc" class="w-4 h-4"></i>
+                  </button>
+                ` : ''}
+                <button onclick="removeExerciseFromActive(${exIdx})" class="p-1.5 text-slate-500 hover:text-red-400 hover:bg-slate-800 rounded-lg">
+                  <i data-lucide="trash-2" class="w-4 h-4"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Sets Header Grid -->
+            <div class="grid grid-cols-12 text-[10px] uppercase font-bold text-slate-500 px-1">
+              <span class="col-span-2">Serie</span>
+              <span class="col-span-3 text-center">${exDef.isBodyweight ? 'Zavorra kg' : 'Carico kg'}</span>
+              <span class="col-span-3 text-center">Reps (Obb/Fatte)</span>
+              <span class="col-span-2 text-center">⚡ SS</span>
+              <span class="col-span-2 text-right">Fatto</span>
+            </div>
+
+            <!-- Sets Rows -->
+            <div class="space-y-2">
+              ${exItem.sets.map((set, setIdx) => `
+                <div class="grid grid-cols-12 items-center gap-1.5 p-1 rounded-xl ${set.completed ? 'bg-emerald-950/20 border border-emerald-500/30' : 'bg-slate-950/60 border border-slate-800/80'}">
+                  <span class="col-span-2 text-xs font-mono font-bold text-slate-400 pl-1">S${setIdx + 1}</span>
+                  
+                  <!-- Weight Load Input -->
+                  <div class="col-span-3">
+                    <input type="number" step="0.5" value="${set.load}" onchange="updateSetData(${exIdx}, ${setIdx}, 'load', this.value)" class="w-full bg-slate-900 border border-slate-800 rounded-lg py-1 px-1.5 text-xs text-white font-bold text-center">
+                  </div>
+
+                  <!-- Reps Target / Done Input -->
+                  <div class="col-span-3 flex items-center justify-center space-x-1">
+                    <input type="number" value="${set.targetReps}" onchange="updateSetData(${exIdx}, ${setIdx}, 'targetReps', this.value)" class="w-10 bg-slate-900 border border-slate-800 rounded-lg py-1 text-xs text-slate-400 text-center font-medium">
+                    <span class="text-slate-600 text-xs">/</span>
+                    <input type="number" value="${set.repsDone}" onchange="updateSetData(${exIdx}, ${setIdx}, 'repsDone', this.value)" class="w-10 bg-slate-900 border border-slate-800 rounded-lg py-1 text-xs text-white font-bold text-center">
+                  </div>
+
+                  <!-- Superset Toggle Pill -->
+                  <div class="col-span-2 flex justify-center">
+                    <button onclick="toggleSetSuperset(${exIdx}, ${setIdx})" class="px-2 py-0.5 rounded-md text-[10px] font-black ${set.isSuperset ? 'bg-purple-600 text-white' : 'bg-slate-800 text-slate-500'}">
+                      SS
+                    </button>
+                  </div>
+
+                  <!-- Set Checkbox Button -->
+                  <div class="col-span-2 flex justify-end">
+                    <button onclick="toggleSetCompleted(${exIdx}, ${setIdx})" class="w-7 h-7 rounded-lg flex items-center justify-center transition-all ${set.completed ? 'bg-emerald-500 text-slate-950 font-bold' : 'bg-slate-800 text-slate-500 hover:text-white'}">
+                      <i data-lucide="check" class="w-4 h-4"></i>
+                    </button>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+
+            <!-- Set Controls (Add set / Copy set / Remove set) -->
+            <div class="flex items-center justify-between pt-1 text-xs font-semibold text-slate-400">
+              <button onclick="addSetToExercise(${exIdx})" class="text-blue-400 hover:text-blue-300 flex items-center gap-1">
+                <i data-lucide="plus" class="w-3.5 h-3.5"></i> Nuova Serie
+              </button>
+              <button onclick="copyPreviousSet(${exIdx})" class="text-purple-400 hover:text-purple-300 flex items-center gap-1">
+                <i data-lucide="copy" class="w-3.5 h-3.5"></i> Copia Ultima
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      updateLiveWorkoutMetrics();
+      lucide.createIcons();
+    }
+
+    function loadRoutineIntoActive(routineId) {
+      const routine = appState.routines.find(r => r.id === routineId);
+      if (!routine) return;
+
+      appState.activeWorkout = {
+        routineId: routine.id,
+        routineName: routine.name,
+        startTime: new Date().toISOString(),
+        exercises: JSON.parse(JSON.stringify(routine.exercises))
+      };
+      saveStateToLocalStorage();
+      renderActiveWorkoutView();
+      renderHeaderActions();
+      showToast(`Scheda "${routine.name}" caricata!`);
+    }
+
+    function updateSetData(exIdx, setIdx, field, value) {
+      if (!appState.activeWorkout) return;
+      appState.activeWorkout.exercises[exIdx].sets[setIdx][field] = parseFloat(value) || 0;
+      saveStateToLocalStorage();
+      updateLiveWorkoutMetrics();
+    }
+
+    function toggleSetSuperset(exIdx, setIdx) {
+      if (!appState.activeWorkout) return;
+      const s = appState.activeWorkout.exercises[exIdx].sets[setIdx];
+      s.isSuperset = !s.isSuperset;
+      saveStateToLocalStorage();
+      renderActiveWorkoutView();
+    }
+
+    function toggleSetCompleted(exIdx, setIdx) {
+      if (!appState.activeWorkout) return;
+      const s = appState.activeWorkout.exercises[exIdx].sets[setIdx];
+      s.completed = !s.completed;
+      saveStateToLocalStorage();
+      renderActiveWorkoutView();
+
+      if (s.completed && appState.restTimer.autoStartOnSetCheck) {
+        startRestTimer(90);
+      }
+    }
+
+    function addSetToExercise(exIdx) {
+      if (!appState.activeWorkout) return;
+      const ex = appState.activeWorkout.exercises[exIdx];
+      const lastSet = ex.sets[ex.sets.length - 1] || { targetReps: 10, repsDone: 10, load: 20, isSuperset: false };
+      ex.sets.push({ ...lastSet, completed: false });
+      saveStateToLocalStorage();
+      renderActiveWorkoutView();
+    }
+
+    function copyPreviousSet(exIdx) {
+      addSetToExercise(exIdx);
+    }
+
+    function removeExerciseFromActive(exIdx) {
+      if (!appState.activeWorkout) return;
+      appState.activeWorkout.exercises.splice(exIdx, 1);
+      saveStateToLocalStorage();
+      renderActiveWorkoutView();
+    }
+
+    function updateLiveWorkoutMetrics() {
+      if (!appState.activeWorkout) {
+        document.getElementById('liveVolumeText').innerText = '0 kg';
+        document.getElementById('liveSetsText').innerText = '0';
+        document.getElementById('liveKcalText').innerText = '0 kcal';
+        return;
+      }
+
+      let totalVolume = 0;
+      let totalSets = 0;
+
+      appState.activeWorkout.exercises.forEach(ex => {
+        ex.sets.forEach(set => {
+          totalSets++;
+          totalVolume += (set.load || 0) * (set.repsDone || 0);
+        });
+      });
+
+      // Calorie burn estimation (approx 5 kcal per completed set + base volume index)
+      const estKcal = Math.round(totalSets * 12 + totalVolume * 0.02);
+
+      document.getElementById('liveVolumeText').innerText = `${totalVolume.toLocaleString('it-IT')} kg`;
+      document.getElementById('liveSetsText').innerText = totalSets;
+      document.getElementById('liveKcalText').innerText = `${estKcal} kcal`;
+    }
+
+    /* REST TIMER FUNCTIONS */
+    function startRestTimer(seconds) {
+      clearInterval(appState.restTimer.timerInterval);
+      appState.restTimer.secondsLeft = seconds;
+      updateRestTimerDisplay();
+
+      appState.restTimer.timerInterval = setInterval(() => {
+        appState.restTimer.secondsLeft--;
+        if (appState.restTimer.secondsLeft <= 0) {
+          clearInterval(appState.restTimer.timerInterval);
+          appState.restTimer.secondsLeft = 0;
+          showToast('⏰ Recupero Completato! Torna al Set!');
+        }
+        updateRestTimerDisplay();
+      }, 1000);
+    }
+
+    function addRestTimerTime(sec) {
+      appState.restTimer.secondsLeft += sec;
+      updateRestTimerDisplay();
+    }
+
+    function toggleAutoTimer() {
+      appState.restTimer.autoStartOnSetCheck = !appState.restTimer.autoStartOnSetCheck;
+      const btn = document.getElementById('autoTimerToggle');
+      btn.innerText = `Auto: ${appState.restTimer.autoStartOnSetCheck ? 'ON' : 'OFF'}`;
+      btn.className = appState.restTimer.autoStartOnSetCheck ? 'px-2 py-1 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[11px] font-semibold rounded-lg' : 'px-2 py-1 bg-slate-800 text-slate-400 text-[11px] font-semibold rounded-lg';
+    }
+
+    function updateRestTimerDisplay() {
+      const m = Math.floor(appState.restTimer.secondsLeft / 60).toString().padStart(2, '0');
+      const s = (appState.restTimer.secondsLeft % 60).toString().padStart(2, '0');
+      document.getElementById('timerDisplay').innerText = `${m}:${s}`;
+    }
+
+    /* PR AUTOMATIC DETECTION & WORKOUT SAVING */
+    function completeAndSaveWorkout() {
+      if (!appState.activeWorkout || appState.activeWorkout.exercises.length === 0) {
+        showToast('Nessun allenamento attivo da salvare');
+        return;
+      }
+
+      const note = document.getElementById('workoutSessionNote').value || '';
+      const finishedWorkout = {
+        id: 'w_' + Date.now(),
+        date: getTodayStr(),
+        routineName: appState.activeWorkout.routineName || 'Sessione Personalizzata',
+        exercises: JSON.parse(JSON.stringify(appState.activeWorkout.exercises)),
+        note: note,
+        isPR: false
+      };
+
+      // PR Detection Logic (Compare max weight / estimated 1RM with history)
+      let newPRsCount = 0;
+      finishedWorkout.exercises.forEach(ex => {
+        let currentMaxWt = 0;
+        ex.sets.forEach(s => { if (s.load > currentMaxWt) currentMaxWt = s.load; });
+
+        // Search previous max
+        let prevMaxWt = 0;
+        appState.historyWorkouts.forEach(hw => {
+          hw.exercises.forEach(hex => {
+            if (hex.exerciseId === ex.exerciseId) {
+              hex.sets.forEach(hs => { if (hs.load > prevMaxWt) prevMaxWt = hs.load; });
+            }
+          });
+        });
+
+        if (currentMaxWt > prevMaxWt && prevMaxWt > 0) {
+          ex.isPR = true;
+          finishedWorkout.isPR = true;
+          newPRsCount++;
+        }
+      });
+
+      appState.historyWorkouts.unshift(finishedWorkout);
+      appState.activeWorkout = null;
+      saveStateToLocalStorage();
+
+      renderActiveWorkoutView();
+      renderHeaderActions();
+
+      if (newPRsCount > 0) {
+        showToast(`🏆 BOOM! Hai registrato ${newPRsCount} Nuovi Record Personali!`);
+      } else {
+        showToast('Sessione salvata con successo nel Calendario!');
+      }
+    }
+
+    /* READINESS STRIP LOGIC */
+    function toggleReadinessPanel() {
+      const inputs = document.getElementById('readinessInputs');
+      const chev = document.getElementById('readinessChevron');
+      inputs.classList.toggle('hidden');
+      chev.classList.toggle('rotate-180');
+    }
+
+    function updateReadinessFromInputs() {
+      const sleep = parseFloat(document.getElementById('sleepSlider').value);
+      const energy = parseInt(document.getElementById('energySlider').value);
+      const doms = parseInt(document.getElementById('domsSlider').value);
+
+      document.getElementById('sleepVal').innerText = `${sleep} h`;
+      document.getElementById('energyVal').innerText = `${energy}/10`;
+      document.getElementById('domsVal').innerText = doms === 0 ? 'Assenti' : doms <= 3 ? `Lieve (${doms}/10)` : `Elevati (${doms}/10)`;
+
+      // Calculate Readiness Score Formula
+      let score = Math.round(100 - (10 - sleep) * 6 - (10 - energy) * 5 - doms * 6);
+      score = Math.max(30, Math.min(100, score));
+
+      const badgeIcon = document.getElementById('readinessBadgeIcon');
+      const statusText = document.getElementById('readinessStatusText');
+      const adviceText = document.getElementById('readinessAdvice');
+
+      badgeIcon.innerText = `⚡ ${score}%`;
+      if (score >= 80) {
+        statusText.innerText = 'Eccellente';
+        statusText.className = 'text-[10px] text-emerald-400 font-semibold px-1.5 py-0.2 rounded bg-emerald-500/10';
+        adviceText.innerText = 'Ottimo recupero! Oggi puoi spingere al massimo.';
+      } else if (score >= 60) {
+        statusText.innerText = 'Moderato';
+        statusText.className = 'text-[10px] text-amber-400 font-semibold px-1.5 py-0.2 rounded bg-amber-500/10';
+        adviceText.innerText = 'Recupero buono. Mantieni i carichi stabiliti.';
+      } else {
+        statusText.innerText = 'Basso';
+        statusText.className = 'text-[10px] text-red-400 font-semibold px-1.5 py-0.2 rounded bg-red-500/10';
+        adviceText.innerText = 'Consigliata sessione leggera o focus tecnica.';
+      }
+
+      appState.readinessLogs[getTodayStr()] = { sleep, energy, doms, score };
+      saveStateToLocalStorage();
+    }
+
+    /* STRETCHING LOGIC */
+    function selectStretchingRoutine(type) {
+      if (type === 'full') {
+        document.getElementById('stretch-btn-full').className = 'p-3 bg-slate-900 border-2 border-blue-500 rounded-2xl text-left';
+        document.getElementById('stretch-btn-lampo').className = 'p-3 bg-slate-900 border border-slate-800 rounded-2xl text-left';
+      } else {
+        document.getElementById('stretch-btn-lampo').className = 'p-3 bg-slate-900 border-2 border-blue-500 rounded-2xl text-left';
+        document.getElementById('stretch-btn-full').className = 'p-3 bg-slate-900 border border-slate-800 rounded-2xl text-left';
+      }
+      renderStretchingList(type);
+    }
+
+    function renderStretchingList(type = 'full') {
+      const items = type === 'lampo' ? STRETCH_ITEMS.slice(0, 3) : STRETCH_ITEMS;
+      const container = document.getElementById('stretchingListContainer');
+      container.innerHTML = items.map((item, idx) => `
+        <div class="flex items-center justify-between p-2.5 bg-slate-950 border border-slate-800 rounded-xl">
+          <div class="flex items-center space-x-2.5">
+            <input type="checkbox" class="w-4 h-4 accent-emerald-500 rounded cursor-pointer">
+            <span class="text-xs font-semibold text-slate-200">${item.name}</span>
+          </div>
+          <span class="text-[11px] font-mono font-bold text-blue-400">${item.duration}</span>
+        </div>
+      `).join('');
+    }
+
+    function startBreathingAnimation() {
+      let step = 0;
+      setInterval(() => {
+        const circle = document.getElementById('breathingCircle');
+        const label = document.getElementById('breathingPhaseText');
+        if (!circle || !label) return;
+        const phase = step % 10;
+        if (phase < 4) {
+          label.innerText = 'INSPIRA';
+          circle.classList.remove('scale-75');
+          circle.classList.add('scale-100');
+        } else {
+          label.innerText = 'ESPIRA';
+          circle.classList.remove('scale-100');
+          circle.classList.add('scale-75');
+        }
+        step++;
+      }, 1000);
+    }
+
+    /* ==================== 6. UPGRADED YAZIO DOUBLE-WHEEL SELECTOR LOGIC ==================== */
+    function openPortionModal(foodId, targetMeal = 'pranzo') {
+      const food = appState.foods.find(f => f.id === foodId);
+      if (!food) return;
+
+      activePortionState.food = food;
+      activePortionState.targetMeal = targetMeal;
+      activePortionState.cookingState = 'crudo';
+
+      // Smart Food-Aware Ordering of Units
+      const orderedUnits = getSmartOrderedUnits(food);
+      
+      const defaultUnitObj = orderedUnits.find(u => u.id === food.defaultUnit) || orderedUnits[0];
+      activePortionState.unit = defaultUnitObj;
+      activePortionState.quantity = defaultUnitObj.type === 'weight' || defaultUnitObj.type === 'volume' ? 100 : 1;
+
+      document.getElementById('portionModalFoodName').innerText = food.name;
+      document.getElementById('portionModalFoodMacrosHint').innerText = `100g = ${food.calories} kcal | C: ${food.carbs}g · P: ${food.protein}g · G: ${food.fat}g`;
+      document.getElementById('portionTargetMealSelect').value = targetMeal;
+
+      // Show or hide Crudo ↔ Cotto converter
+      const crudoCottoBox = document.getElementById('crudoCottoContainer');
+      const yieldNote = document.getElementById('cookingYieldNote');
+      if (food.isConvertible) {
+        crudoCottoBox.classList.remove('hidden');
+        yieldNote.classList.remove('hidden');
+        setCookingState('crudo');
+      } else {
+        crudoCottoBox.classList.add('hidden');
+        yieldNote.classList.add('hidden');
+      }
+
+      // Render Double Wheel Options
+      renderUnitWheel(orderedUnits);
+      renderNumberWheelForUnit(activePortionState.unit);
+
+      // Open Modal
+      document.getElementById('foodPortionModal').classList.remove('hidden');
+      syncPortionModalUI();
+      lucide.createIcons();
+    }
+
+    function getSmartOrderedUnits(food) {
+      const category = (food.category || '').toLowerCase();
+      const name = food.name.toLowerCase();
+
+      let topUnitIds = [];
+      if (name.includes('olio') || name.includes('marmellata') || name.includes('crema') || name.includes('hummus')) {
+        topUnitIds = ['cucchiaino', 'cucchiaio', 'g', 'ml'];
+      } else if (category.includes('bevande') || name.includes('latte') || name.includes('albume')) {
+        topUnitIds = ['ml', 'bicchiere', 'tazza', 'cl', 'L', 'g'];
+      } else if (category.includes('uova') || name.includes('uovo') || name.includes('banana') || name.includes('piadina') || name.includes('cioccolato')) {
+        topUnitIds = ['pezzo', 'fetta', 'quadretto', 'g', 'porzione'];
+      } else {
+        topUnitIds = ['g', 'cucchiaio', 'cucchiaino', 'kg', 'ml', 'porzione'];
+      }
+
+      // Reorder UNIT_DEFINITIONS putting topUnitIds first
+      const topUnits = [];
+      const restUnits = [];
+      UNIT_DEFINITIONS.forEach(u => {
+        if (topUnitIds.includes(u.id)) topUnits.push(u);
+        else restUnits.push(u);
+      });
+
+      topUnits.sort((a, b) => topUnitIds.indexOf(a.id) - topUnitIds.indexOf(b.id));
+      return [...topUnits, ...restUnits];
+    }
+
+    function renderUnitWheel(units) {
+      const container = document.getElementById('unitWheelContainer');
+      container.innerHTML = units.map((u, idx) => `
+        <div onclick="selectUnitFromWheel(${idx})" class="scroll-wheel-item h-10 flex items-center px-3 space-x-2 text-xs font-bold cursor-pointer transition-colors ${idx === 0 ? 'text-emerald-400 font-black' : 'text-slate-400 hover:text-slate-200'}">
+          <i data-lucide="${u.icon}" class="w-4 h-4 shrink-0"></i>
+          <span class="truncate">${u.label}</span>
+        </div>
+      `).join('');
+    }
+
+    function renderNumberWheelForUnit(unit) {
+      let nums = [];
+      if (unit.id === 'g' || unit.id === 'ml' || unit.id === 'cl') {
+        nums = [1, 2, 5, 10, 15, 20, 25, 30, 40, 50, 60, 75, 80, 100, 120, 150, 180, 200, 250, 300, 350, 400, 500];
+      } else if (unit.id === 'kg' || unit.id === 'L') {
+        nums = [0.05, 0.1, 0.2, 0.25, 0.3, 0.4, 0.5, 0.75, 1.0, 1.5, 2.0];
+      } else {
+        nums = [0.25, 0.5, 0.75, 1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10];
+      }
+      activePortionState.numberList = nums;
+
+      const container = document.getElementById('numberWheelContainer');
+      container.innerHTML = nums.map((n, idx) => {
+        let displayStr = n.toString();
+        if (n === 0.25) displayStr = '¼';
+        if (n === 0.5) displayStr = '½';
+        if (n === 0.75) displayStr = '¾';
+        if (n === 1.5) displayStr = '1 ½';
+
+        return `
+          <div onclick="selectNumberFromWheel(${idx})" class="scroll-wheel-item h-10 flex items-center justify-center text-xs font-bold cursor-pointer transition-colors ${idx === 0 ? 'text-emerald-400 font-black text-sm' : 'text-slate-400 hover:text-slate-200'}">
+            ${displayStr}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function selectUnitFromWheel(idx) {
+      const units = getSmartOrderedUnits(activePortionState.food);
+      if (!units[idx]) return;
+
+      activePortionState.selectedUnitIndex = idx;
+      activePortionState.unit = units[idx];
+      renderNumberWheelForUnit(activePortionState.unit);
+      
+      // Update default quantity for new unit
+      if (activePortionState.unit.type === 'weight' || activePortionState.unit.type === 'volume') {
+        activePortionState.quantity = 100;
+      } else {
+        activePortionState.quantity = 1;
+      }
+
+      syncPortionModalUI();
+      lucide.createIcons();
+    }
+
+    function selectNumberFromWheel(idx) {
+      const num = activePortionState.numberList[idx];
+      if (num !== undefined) {
+        activePortionState.selectedNumberIndex = idx;
+        activePortionState.quantity = num;
+        syncPortionModalUI();
+      }
+    }
+
+    function handleUnitWheelScroll() {
+      const container = document.getElementById('unitWheelContainer');
+      const itemHeight = 40;
+      const idx = Math.round(container.scrollTop / itemHeight);
+      const units = getSmartOrderedUnits(activePortionState.food);
+      if (units[idx] && idx !== activePortionState.selectedUnitIndex) {
+        selectUnitFromWheel(idx);
+      }
+    }
+
+    function handleNumberWheelScroll() {
+      const container = document.getElementById('numberWheelContainer');
+      const itemHeight = 40;
+      const idx = Math.round(container.scrollTop / itemHeight);
+      if (activePortionState.numberList[idx] !== undefined && idx !== activePortionState.selectedNumberIndex) {
+        selectNumberFromWheel(idx);
+      }
+    }
+
+    function handleDirectInput(val) {
+      activePortionState.quantity = parseFloat(val) || 0;
+      syncPortionModalUI(false);
+    }
+
+    function stepQuantity(delta) {
+      const u = activePortionState.unit;
+      const step = u.type === 'weight' || u.type === 'volume' ? 10 : 0.5;
+      activePortionState.quantity = Math.max(0, activePortionState.quantity + step * delta);
+      syncPortionModalUI();
+    }
+
+    function setCookingState(state) {
+      activePortionState.cookingState = state;
+      const btnCrudo = document.getElementById('btnStateCrudo');
+      const btnCotto = document.getElementById('btnStateCotto');
+      if (state === 'crudo') {
+        btnCrudo.className = 'flex-1 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 text-white';
+        btnCotto.className = 'flex-1 py-1.5 rounded-lg text-xs font-semibold text-slate-400';
+      } else {
+        btnCotto.className = 'flex-1 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 text-white';
+        btnCrudo.className = 'flex-1 py-1.5 rounded-lg text-xs font-semibold text-slate-400';
+      }
+      syncPortionModalUI();
+    }
+
+    function syncPortionModalUI(updateInput = true) {
+      const f = activePortionState.food;
+      const u = activePortionState.unit;
+      const qty = activePortionState.quantity;
+
+      // Calculate Gram Equiv
+      let totalGrams = qty * u.gramEquiv;
+      
+      // If cooked, adjust for raw yield
+      if (activePortionState.cookingState === 'cotto' && f.isConvertible) {
+        totalGrams = totalGrams / (f.cookedYieldFactor || 1);
+        document.getElementById('cookingYieldNote').innerText = `* Stima automatica: ${qty}${u.id} cotto ≈ ${Math.round(totalGrams)}g crudo.`;
+      }
+
+      // Update Yazio Header Badge
+      document.getElementById('yazioBadgeUnitName').innerText = u.label;
+      document.getElementById('yazioBadgeGramEquiv').innerText = `= ${u.gramEquiv} g`;
+      document.getElementById('yazioBadgeGramTotal').innerText = `${Math.round(totalGrams)} g (o ml)`;
+
+      // Update Direct Input
+      if (updateInput) {
+        document.getElementById('portionDirectInput').value = qty;
+      }
+      document.getElementById('portionDirectUnitSuffix').innerText = u.id;
+
+      // Update Quick Chips
+      const chipsContainer = document.getElementById('quickChipsContainer');
+      const chipVals = u.type === 'weight' || u.type === 'volume' ? [50, 100, 150, 200, 250, 300] : [0.5, 1, 2, 3, 4];
+      chipsContainer.innerHTML = chipVals.map(val => `
+        <button onclick="setQuickChipQuantity(${val})" class="px-2.5 py-1 rounded-xl bg-slate-800 hover:bg-emerald-600/30 border border-slate-700 text-[11px] font-bold text-slate-300">
+          ${val} ${u.id}
+        </button>
+      `).join('');
+
+      // Update Visual Guide Text
+      const guideText = document.getElementById('visualPortionGuideText');
+      if (u.id === 'cucchiaio') guideText.innerHTML = `<strong>Guida a occhio:</strong> 1 Cucchiaio equivale alla dimensione della falange del pollice (~10g).`;
+      else if (u.id === 'cucchiaino') guideText.innerHTML = `<strong>Guida a occhio:</strong> 1 Cucchiaino equivale alla punta dell'indice (~4.5g).`;
+      else if (u.id === 'manciata') guideText.innerHTML = `<strong>Guida a occhio:</strong> 1 Manciata corrisponde al palmo chiuso (~30g di frutta secca).`;
+      else guideText.innerHTML = `<strong>Guida a occhio:</strong> Inserimento preciso per bilancia digitale.`;
+    }
+
+    function setQuickChipQuantity(val) {
+      activePortionState.quantity = val;
+      syncPortionModalUI();
+    }
+
+    function confirmAddPortionToMeal() {
+      const f = activePortionState.food;
+      const u = activePortionState.unit;
+      const qty = activePortionState.quantity;
+      if (!f || !u || qty <= 0) {
+        showToast('Inserisci una quantità valida');
+        return;
+      }
+
+      const targetMeal = document.getElementById('portionTargetMealSelect').value || activePortionState.targetMeal || 'pranzo';
+      let totalGrams = qty * u.gramEquiv;
+      if (activePortionState.cookingState === 'cotto' && f.isConvertible) {
+        totalGrams = totalGrams / (f.cookedYieldFactor || 1);
+      }
+      const factor = totalGrams / 100;
+
+      const logEntry = {
+        id: 'log_' + Date.now(),
+        foodId: f.id,
+        name: f.name + (activePortionState.cookingState === 'cotto' && f.isConvertible ? ' (cotto)' : ''),
+        unitLabel: `${qty} ${u.id} (${Math.round(totalGrams)}g)`,
+        calories: Math.round((f.calories || 0) * factor),
+        carbs: +((f.carbs || 0) * factor).toFixed(1),
+        protein: +((f.protein || 0) * factor).toFixed(1),
+        fat: +((f.fat || 0) * factor).toFixed(1)
+      };
+
+      const today = appState.selectedDateStr || getTodayStr();
+      initTodayLog(today);
+      appState.nutritionLogs[today].meals[targetMeal].push(logEntry);
+      appState.recentFoods = [f.id, ...appState.recentFoods.filter(id => id !== f.id)].slice(0, 10);
+      saveStateToLocalStorage();
+
+      closeModal('foodPortionModal');
+      closeModal('foodLoggerModal');
+      renderNutritionDiaryView();
+      showToast(`Aggiunto a ${targetMeal.toUpperCase()}: ${logEntry.name}`);
+    }
+
+    /* ==================== 7. NUTRITION DIARY & SUBTABS ==================== */
+    function navigateNutritionDate(delta) {
+      const parts = (appState.selectedDateStr || getTodayStr()).split('-').map(Number);
+      const d = new Date(parts[0], parts[1] - 1, parts[2] + delta);
+      appState.selectedDateStr = d.toISOString().split('T')[0];
+      initTodayLog(appState.selectedDateStr);
+      renderNutritionDiaryView();
+      if (appState.nutritionSubTab === 'vitamine') renderMicronutrientsView();
+    }
+
+    function updateDailyExpenditure() {
+      const dateKey = appState.selectedDateStr || getTodayStr();
+      initTodayLog(dateKey);
+      appState.nutritionLogs[dateKey].sportHours = parseFloat(document.getElementById('sportHoursInput').value) || 0;
+      appState.nutritionLogs[dateKey].uniHours = parseFloat(document.getElementById('uniHoursInput').value) || 0;
+      saveStateToLocalStorage();
+      renderNutritionDiaryView();
+    }
+
+    function renderNutritionDiaryView() {
+      const today = appState.selectedDateStr || getTodayStr();
+      initTodayLog(today);
+      const dayLog = appState.nutritionLogs[today];
+
+      // Update Date Header Display
+      const dateParts = today.split('-').map(Number);
+      const dateObj = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
+      const dateLabel = today === getTodayStr()
+        ? `Oggi, ${dateObj.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })}`
+        : dateObj.toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' });
+      document.getElementById('nutritionDateDisplay').innerText = dateLabel;
+      document.getElementById('sportHoursInput').value = dayLog.sportHours ?? 1.0;
+      document.getElementById('uniHoursInput').value = dayLog.uniHours ?? 4.0;
+
+      // Compute Total Consumed Macros
+      let totalKcal = 0, totalCarbs = 0, totalProt = 0, totalFat = 0;
+      Object.values(dayLog.meals).forEach(mealArray => {
+        mealArray.forEach(item => {
+          totalKcal += item.calories;
+          totalCarbs += item.carbs;
+          totalProt += item.protein;
+          totalFat += item.fat;
+        });
+      });
+
+      // Target Mifflin-St Jeor Formula Calculation
+      const p = appState.profile;
+      let bmr = (10 * p.weight) + (6.25 * p.height) - (5 * p.age) + (p.gender === 'male' ? 5 : -161);
+      const extraBurn = Math.round((dayLog.sportHours * 350) + (dayLog.uniHours * 40));
+      let targetKcal = Math.round(bmr * 1.35 + extraBurn);
+      if (p.goal === 'surplus') targetKcal += 300;
+      if (p.goal === 'deficit') targetKcal -= 400;
+
+      const remainingKcal = targetKcal - totalKcal;
+
+      // Dynamic Target Macros (50% C, 25% P, 25% F)
+      const targetCarbs = Math.round((targetKcal * 0.50) / 4);
+      const targetProt = Math.round((targetKcal * 0.25) / 4);
+      const targetFat = Math.round((targetKcal * 0.25) / 9);
+
+      // Render Ring & Macro Texts
+      document.getElementById('kcalConsumedText').innerText = totalKcal;
+      document.getElementById('kcalRemainingText').innerText = remainingKcal.toLocaleString('it-IT');
+      document.getElementById('kcalBurnedText').innerText = extraBurn;
+      document.getElementById('extraBurnCalculated').innerText = `+${extraBurn} kcal`;
+
+      // SVG Ring Offset (stroke-dasharray = 301.59)
+      const pct = Math.min(1.0, totalKcal / targetKcal);
+      const offset = 301.59 * (1 - pct);
+      document.getElementById('yazioProgressCircle').style.strokeDashoffset = offset;
+
+      // Render Macro Bars
+      document.getElementById('carbsMacroText').innerText = `${Math.round(totalCarbs)} / ${targetCarbs}g`;
+      document.getElementById('carbsProgressBar').style.width = `${Math.min(100, (totalCarbs / targetCarbs) * 100)}%`;
+
+      document.getElementById('proteinMacroText').innerText = `${Math.round(totalProt)} / ${targetProt}g`;
+      document.getElementById('proteinProgressBar').style.width = `${Math.min(100, (totalProt / targetProt) * 100)}%`;
+
+      document.getElementById('fatMacroText').innerText = `${Math.round(totalFat)} / ${targetFat}g`;
+      document.getElementById('fatProgressBar').style.width = `${Math.min(100, (totalFat / targetFat) * 100)}%`;
+
+      // Render 4 Meal Cards
+      renderMealCards(dayLog.meals);
+
+      // Render Hydration & Supplements
+      renderHydrationCard();
+      renderSupplementCard();
+    }
+
+    function renderMealCards(meals) {
+      const container = document.getElementById('mealCardsContainer');
+      const mealDefs = [
+        { key: 'colazione', name: '☕ Colazione', icon: 'coffee' },
+        { key: 'pranzo', name: '🍝 Pranzo', icon: 'utensils' },
+        { key: 'cena', name: '🥩 Cena', icon: 'drumstick' },
+        { key: 'spuntini', name: '🍎 Spuntini', icon: 'apple' }
+      ];
+
+      container.innerHTML = mealDefs.map(m => {
+        const items = meals[m.key] || [];
+        let mealKcal = 0;
+        items.forEach(i => mealKcal += i.calories);
+
+        return `
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-2">
+                <h4 class="text-xs font-bold text-white">${m.name}</h4>
+                <span class="text-xs font-mono font-bold text-emerald-400">${mealKcal} kcal</span>
+              </div>
+              <div class="flex items-center space-x-1">
+                <button onclick="copyMealFromYesterday('${m.key}')" class="px-2 py-1 bg-slate-800 hover:bg-slate-750 text-[10px] font-semibold text-slate-300 rounded-lg" title="Copia da Ieri">
+                  Ieri
+                </button>
+                <button onclick="openFoodLoggerModal('${m.key}')" class="p-1.5 bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30 rounded-lg text-xs font-bold flex items-center gap-1">
+                  <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
+            </div>
+
+            <div class="space-y-1.5">
+              ${items.length === 0 ? '<p class="text-[11px] text-slate-500 italic">Nessun alimento registrato.</p>' : items.map((item, itemIdx) => `
+                <div class="flex items-center justify-between p-2 bg-slate-950 border border-slate-800/80 rounded-xl">
+                  <div>
+                    <p class="text-xs font-bold text-slate-200">${item.name}</p>
+                    <p class="text-[10px] text-slate-400">${item.unitLabel} · C:${item.carbs}g P:${item.protein}g G:${item.fat}g</p>
+                  </div>
+                  <div class="flex items-center space-x-2">
+                    <span class="text-xs font-mono font-bold text-emerald-400">${item.calories} kcal</span>
+                    <button onclick="deleteMealEntry('${m.key}', ${itemIdx})" class="text-slate-500 hover:text-red-400">
+                      <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                    </button>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }).join('');
+      lucide.createIcons();
+    }
+
+    function deleteMealEntry(mealKey, itemIdx) {
+      const today = appState.selectedDateStr || getTodayStr();
+      initTodayLog(today);
+      appState.nutritionLogs[today].meals[mealKey].splice(itemIdx, 1);
+      saveStateToLocalStorage();
+      renderNutritionDiaryView();
+    }
+
+    function copyMealFromYesterday(mealKey) {
+      const baseParts = (appState.selectedDateStr || getTodayStr()).split('-').map(Number);
+      const yesterdayStr = new Date(baseParts[0], baseParts[1] - 1, baseParts[2] - 1).toISOString().split('T')[0];
+      const yestLog = appState.nutritionLogs[yesterdayStr];
+      if (!yestLog || !yestLog.meals[mealKey] || yestLog.meals[mealKey].length === 0) {
+        showToast('Nessun pasto trovato per ieri');
+        return;
+      }
+      const today = appState.selectedDateStr || getTodayStr();
+      initTodayLog(today);
+      appState.nutritionLogs[today].meals[mealKey] = JSON.parse(JSON.stringify(yestLog.meals[mealKey]));
+      saveStateToLocalStorage();
+      renderNutritionDiaryView();
+      showToast(`Copiata ${mealKey.toUpperCase()} da Ieri!`);
+    }
+
+    function copyWholeDayFromYesterday() {
+      const baseParts = (appState.selectedDateStr || getTodayStr()).split('-').map(Number);
+      const yesterdayStr = new Date(baseParts[0], baseParts[1] - 1, baseParts[2] - 1).toISOString().split('T')[0];
+      const yestLog = appState.nutritionLogs[yesterdayStr];
+      if (!yestLog) {
+        showToast('Nessuna giornata registrata ieri');
+        return;
+      }
+      const today = appState.selectedDateStr || getTodayStr();
+      initTodayLog(today);
+      appState.nutritionLogs[today].meals = JSON.parse(JSON.stringify(yestLog.meals));
+      saveStateToLocalStorage();
+      renderNutritionDiaryView();
+      showToast('Copiata l\'intera giornata nutrizionale da Ieri!');
+    }
+
+    /* HYDRATION & SUPPLEMENTS */
+    function renderHydrationCard() {
+      const today = appState.selectedDateStr || getTodayStr();
+      initTodayLog(today);
+      const currentMl = appState.hydrationLogs[today] || 0;
+      const targetMl = 2500;
+      document.getElementById('waterGoalText').innerText = `${currentMl} / ${targetMl} ml`;
+      document.getElementById('waterProgressBar').style.width = `${Math.min(100, (currentMl / targetMl) * 100)}%`;
+    }
+
+    function addWater(ml) {
+      const today = appState.selectedDateStr || getTodayStr();
+      initTodayLog(today);
+      appState.hydrationLogs[today] = (appState.hydrationLogs[today] || 0) + ml;
+      saveStateToLocalStorage();
+      renderHydrationCard();
+    }
+
+    function addCustomWater() {
+      const val = parseInt(document.getElementById('customWaterInput').value) || 0;
+      if (val > 0) addWater(val);
+      document.getElementById('customWaterInput').value = '';
+    }
+
+    function renderSupplementCard() {
+      const today = appState.selectedDateStr || getTodayStr();
+      initTodayLog(today);
+      const list = appState.supplementLogs[today] || [];
+      const container = document.getElementById('supplementListContainer');
+      container.innerHTML = list.map((item, idx) => `
+        <div onclick="toggleSupplement(${idx})" class="flex items-center justify-between p-2.5 rounded-xl border cursor-pointer transition-all ${item.taken ? 'bg-purple-950/20 border-purple-500/30 text-purple-300' : 'bg-slate-950 border-slate-800 text-slate-400'}">
+          <div>
+            <p class="text-xs font-bold">${item.name}</p>
+            <p class="text-[10px] opacity-75">${item.dose}</p>
+          </div>
+          <i data-lucide="${item.taken ? 'check-circle' : 'circle'}" class="w-4 h-4 shrink-0"></i>
+        </div>
+      `).join('');
+      lucide.createIcons();
+    }
+
+    function toggleSupplement(idx) {
+      const today = appState.selectedDateStr || getTodayStr();
+      initTodayLog(today);
+      const list = appState.supplementLogs[today];
+      list[idx].taken = !list[idx].taken;
+      saveStateToLocalStorage();
+      renderSupplementCard();
+    }
+
+    function openAddSupplementModal() {
+      document.getElementById('newSupplementName').value = '';
+      document.getElementById('newSupplementDose').value = '';
+      document.getElementById('addSupplementModal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function confirmAddSupplement() {
+      const name = document.getElementById('newSupplementName').value.trim();
+      const dose = document.getElementById('newSupplementDose').value.trim() || '1 dose';
+      if (!name) {
+        showToast('Inserisci il nome dell\'integratore');
+        return;
+      }
+      const today = appState.selectedDateStr || getTodayStr();
+      initTodayLog(today);
+      appState.supplementLogs[today].push({ name, dose, taken: false });
+      saveStateToLocalStorage();
+      closeModal('addSupplementModal');
+      renderSupplementCard();
+      showToast(`Integratore "${name}" aggiunto!`);
+    }
+
+    function renderMicronutrientsView() {
+      const container = document.getElementById('micronutrientsContainer');
+      if (!container) return;
+      const dateKey = appState.selectedDateStr || getTodayStr();
+      initTodayLog(dateKey);
+      const dayLog = appState.nutritionLogs[dateKey];
+
+      let totalKcal = 0, totalCarbs = 0, totalProt = 0, totalFat = 0;
+      Object.values(dayLog.meals).forEach(arr => {
+        arr.forEach(item => {
+          totalKcal += item.calories || 0;
+          totalCarbs += item.carbs || 0;
+          totalProt += item.protein || 0;
+          totalFat += item.fat || 0;
+        });
+      });
+
+      const scale = totalKcal > 0 ? Math.min(1.4, totalKcal / 2200) : 0;
+      const micros = [
+        { name: 'Fibre Alimentari', val: Math.round(totalCarbs * 0.11), target: 30, unit: 'g', tip: 'Avena, pasta integrale, frutta, legumi' },
+        { name: 'Vitamina C', val: Math.round(85 * scale), target: 105, unit: 'mg', tip: 'Agrumi, broccoli, kiwi, peperoni' },
+        { name: 'Vitamina D', val: +(11 * scale).toFixed(1), target: 15, unit: 'µg', tip: 'Uova, pesce azzurro, sole' },
+        { name: 'Vitamina B12', val: +(totalProt * 0.025).toFixed(1), target: 2.4, unit: 'µg', tip: 'Carne, pesce, uova, latticini' },
+        { name: 'Folati (Vit. B9)', val: Math.round(310 * scale), target: 400, unit: 'µg', tip: 'Verdure a foglia verde, legumi' },
+        { name: 'Calcio', val: Math.round(780 * scale), target: 1000, unit: 'mg', tip: 'Latticini, soia fortificata, mandorle' },
+        { name: 'Ferro', val: +(totalProt * 0.08).toFixed(1), target: 10, unit: 'mg', tip: 'Carne rossa, legumi, avena, fondente' },
+        { name: 'Magnesio', val: Math.round(290 * scale), target: 350, unit: 'mg', tip: 'Frutta secca, fondente, avena' },
+        { name: 'Potassio', val: Math.round(3150 * scale), target: 3900, unit: 'mg', tip: 'Banane, patate, legumi, verdure' },
+        { name: 'Zinco', val: +(totalProt * 0.09).toFixed(1), target: 12, unit: 'mg', tip: 'Carne, uova, cereali integrali' },
+        { name: 'Omega-3 (EPA/DHA)', val: +(totalFat * 0.025).toFixed(2), target: 1.6, unit: 'g', tip: 'Sgombro, salmone, noci, semi di lino' },
+        { name: 'Sodio (limite max)', val: Math.round(1450 * scale), target: 2000, unit: 'mg', tip: 'Evita eccessi di sale e cibi ultra-processati' }
+      ];
+
+      container.innerHTML = micros.map(m => {
+        const pct = Math.min(100, Math.round((m.val / m.target) * 100));
+        const barColor = pct >= 80 ? 'bg-emerald-500' : pct >= 45 ? 'bg-blue-500' : 'bg-amber-500';
+        return `
+          <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 space-y-1.5">
+            <div class="flex justify-between text-xs font-bold">
+              <span class="text-slate-200">${m.name}</span>
+              <span class="text-emerald-400">${m.val} / ${m.target} ${m.unit} <span class="text-slate-500 font-normal">(${pct}%)</span></span>
+            </div>
+            <div class="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden">
+              <div class="${barColor} h-full rounded-full transition-all duration-500" style="width: ${pct}%"></div>
+            </div>
+            <p class="text-[10px] text-slate-500">Fonti: ${m.tip}</p>
+          </div>
+        `;
+      }).join('');
+    }
+
+    /* INTERMITTENT FASTING TIMER */
+    function startFastingInterval() {
+      setInterval(() => {
+        const fs = appState.fastingState;
+        if (!fs.isRunning || !fs.startTime) return;
+
+        const elapsedMs = Date.now() - new Date(fs.startTime).getTime();
+        const targetHours = parseInt(fs.preset.split(':')[0]);
+        const targetMs = targetHours * 3600 * 1000;
+
+        const remainingMs = Math.max(0, targetMs - elapsedMs);
+        const hours = Math.floor(remainingMs / (3600 * 1000));
+        const mins = Math.floor((remainingMs % (3600 * 1000)) / (60 * 1000));
+        const secs = Math.floor((remainingMs % (60 * 1000)) / 1000);
+
+        document.getElementById('fastingTimerDisplay').innerText = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        document.getElementById('fastingRemainingText').innerText = `Rimanenti: ${hours}h ${mins}m su ${targetHours}h`;
+        
+        const pct = Math.min(100, (elapsedMs / targetMs) * 100);
+        document.getElementById('fastingProgressBar').style.width = `${pct}%`;
+      }, 1000);
+    }
+
+    function toggleFastingTimer() {
+      const fs = appState.fastingState;
+      fs.isRunning = !fs.isRunning;
+      if (fs.isRunning && !fs.startTime) fs.startTime = new Date().toISOString();
+      saveStateToLocalStorage();
+      document.getElementById('fastingStartToggleBtn').innerText = fs.isRunning ? 'PAUSA' : 'AVVIA';
+    }
+
+    function setFastingPreset(preset) {
+      appState.fastingState.preset = preset;
+      saveStateToLocalStorage();
+      const map = { '16:8': 'fasting-btn-16', '14:10': 'fasting-btn-14', '18:6': 'fasting-btn-18' };
+      Object.entries(map).forEach(([p, id]) => {
+        const btn = document.getElementById(id);
+        if (!btn) return;
+        btn.className = p === preset
+          ? 'px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-600 text-white'
+          : 'px-2 py-0.5 rounded text-[10px] font-semibold text-slate-400';
+      });
+      showToast(`Preset Digiuno impostato a ${preset}`);
+    }
+
+    /* QUICK ADD MACRO & RECIPES & SHOPPING */
+    function openQuickAddMacroModal() {
+      document.getElementById('quickAddMacroModal').classList.remove('hidden');
+    }
+
+    function confirmQuickAddMacro() {
+      const name = document.getElementById('quickAddName').value || 'Pasto Rapido';
+      const kcal = parseInt(document.getElementById('quickAddKcal').value) || 0;
+      const carbs = parseFloat(document.getElementById('quickAddCarbs').value) || 0;
+      const prot = parseFloat(document.getElementById('quickAddProtein').value) || 0;
+      const fat = parseFloat(document.getElementById('quickAddFat').value) || 0;
+      const meal = document.getElementById('quickAddMeal').value;
+
+      const logEntry = {
+        id: 'log_' + Date.now(),
+        name: name,
+        unitLabel: '1 porzione',
+        calories: kcal,
+        carbs: carbs,
+        protein: prot,
+        fat: fat
+      };
+
+      const today = appState.selectedDateStr || getTodayStr();
+      initTodayLog(today);
+      appState.nutritionLogs[today].meals[meal].push(logEntry);
+      saveStateToLocalStorage();
+
+      closeModal('quickAddMacroModal');
+      renderNutritionDiaryView();
+      showToast('Aggiunta rapida completata!');
+    }
+
+    function openCreateRecipeModal() {
+      document.getElementById('recipeNameInput').value = '';
+      document.getElementById('recipeKcalInput').value = '';
+      document.getElementById('recipeCarbsInput').value = '';
+      document.getElementById('recipeProtInput').value = '';
+      document.getElementById('recipeFatInput').value = '';
+      document.getElementById('createRecipeModal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function saveRecipe() {
+      const name = document.getElementById('recipeNameInput').value.trim();
+      const calories = parseInt(document.getElementById('recipeKcalInput').value) || 0;
+      const carbs = parseFloat(document.getElementById('recipeCarbsInput').value) || 0;
+      const protein = parseFloat(document.getElementById('recipeProtInput').value) || 0;
+      const fat = parseFloat(document.getElementById('recipeFatInput').value) || 0;
+      if (!name) {
+        showToast('Inserisci il nome della ricetta');
+        return;
+      }
+      appState.recipes.unshift({
+        id: 'rec_' + Date.now(),
+        name,
+        calories: calories || Math.round(carbs * 4 + protein * 4 + fat * 9),
+        carbs,
+        protein,
+        fat,
+        totalServings: 1
+      });
+      saveStateToLocalStorage();
+      closeModal('createRecipeModal');
+      renderRecipesView();
+      showToast(`Ricetta "${name}" salvata!`);
+    }
+
+    function renderRecipesView() {
+      const container = document.getElementById('recipesListContainer');
+      container.innerHTML = appState.recipes.map(r => `
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
+          <div class="flex items-center justify-between">
+            <h4 class="text-sm font-bold text-white">${r.name}</h4>
+            <div class="flex items-center space-x-1">
+              <!-- Fast Add to Shopping List (Feature Addition 8) -->
+              <button onclick="addRecipeToShopping('${r.id}')" class="px-2.5 py-1 bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30 rounded-lg text-xs font-bold flex items-center gap-1">
+                <i data-lucide="shopping-bag" class="w-3.5 h-3.5"></i> + Spesa
+              </button>
+            </div>
+          </div>
+          <div class="flex items-center justify-between text-xs text-slate-400">
+            <span>${r.calories} kcal | C:${r.carbs}g P:${r.protein}g G:${r.fat}g</span>
+            <span class="font-bold text-amber-400">Porz: ${r.totalServings}</span>
+          </div>
+        </div>
+      `).join('');
+      lucide.createIcons();
+    }
+
+    function addRecipeToShopping(recipeId) {
+      const r = appState.recipes.find(rec => rec.id === recipeId);
+      if (!r) return;
+
+      appState.shoppingList.push({ id: 'shop_' + Date.now(), name: r.name + ' (Ingredienti)', price: 5.0, checked: false });
+      saveStateToLocalStorage();
+      showToast(`Ingredienti di "${r.name}" aggiunti alla Spesa!`);
+    }
+
+    function renderShoppingView() {
+      const container = document.getElementById('shoppingListItemsContainer');
+      let totalChecked = 0;
+      appState.shoppingList.forEach(item => { if (item.checked) totalChecked += item.price; });
+
+      document.getElementById('shoppingBudgetDisplay').innerText = `Spesa Spuntata: ${totalChecked.toFixed(2)} € / 40.00 €`;
+      document.getElementById('shoppingBudgetProgressBar').style.width = `${Math.min(100, (totalChecked / 40) * 100)}%`;
+
+      container.innerHTML = appState.shoppingList.map((item, idx) => `
+        <div class="flex items-center justify-between p-2.5 bg-slate-950 border border-slate-800 rounded-xl">
+          <div class="flex items-center space-x-2.5">
+            <input type="checkbox" ${item.checked ? 'checked' : ''} onchange="toggleShoppingItem(${idx})" class="w-4 h-4 accent-emerald-500 rounded cursor-pointer">
+            <span class="text-xs font-semibold ${item.checked ? 'line-through text-slate-500' : 'text-slate-200'}">${item.name}</span>
+          </div>
+          <div class="flex items-center space-x-2">
+            <span class="text-xs font-mono font-bold text-emerald-400">${item.price.toFixed(2)} €</span>
+            <button onclick="removeShoppingItem(${idx})" class="text-slate-500 hover:text-red-400"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+          </div>
+        </div>
+      `).join('');
+      lucide.createIcons();
+    }
+
+    function toggleShoppingItem(idx) {
+      appState.shoppingList[idx].checked = !appState.shoppingList[idx].checked;
+      saveStateToLocalStorage();
+      renderShoppingView();
+    }
+
+    function removeShoppingItem(idx) {
+      appState.shoppingList.splice(idx, 1);
+      saveStateToLocalStorage();
+      renderShoppingView();
+    }
+
+    function addShoppingItem() {
+      const name = document.getElementById('newShoppingItemInput').value;
+      const price = parseFloat(document.getElementById('newShoppingItemPrice').value) || 0;
+      if (!name) return;
+
+      appState.shoppingList.push({ id: 'shop_' + Date.now(), name, price, checked: false });
+      saveStateToLocalStorage();
+      document.getElementById('newShoppingItemInput').value = '';
+      document.getElementById('newShoppingItemPrice').value = '';
+      renderShoppingView();
+    }
+
+    function resetShoppingChecks() {
+      appState.shoppingList.forEach(item => { item.checked = false; });
+      saveStateToLocalStorage();
+      renderShoppingView();
+      showToast('Spunte della lista spesa azzerate');
+    }
+
+    /* ==================== 8. CALENDAR & HISTORY LOGIC ==================== */
+    function switchCalendarView(view) {
+      appState.calendarView = view;
+      appState.calendarOffset = 0;
+      ['week', 'month', 'year'].forEach(v => {
+        const btn = document.getElementById(`cal-view-${v}`);
+        if (!btn) return;
+        btn.className = v === view
+          ? 'px-3 py-1.5 rounded-xl text-xs font-bold bg-blue-600 text-white'
+          : 'px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-400';
+      });
+      renderCalendarView();
+    }
+
+    function navigateCalendarPeriod(delta) {
+      appState.calendarOffset += delta;
+      renderCalendarView();
+    }
+
+    function toggleCalendarLegendModal() {
+      document.getElementById('calendarLegendModal').classList.toggle('hidden');
+      lucide.createIcons();
+    }
+
+    function selectCalendarDate(dateStr) {
+      appState.selectedDateStr = appState.selectedDateStr === dateStr ? '' : dateStr;
+      renderCalendarView();
+    }
+
+    function getRoutineDotColor(routineName) {
+      const n = (routineName || '').toLowerCase();
+      if (n.includes('spinta') || n.includes('push')) return 'bg-blue-500';
+      if (n.includes('tirata') || n.includes('pull')) return 'bg-emerald-500';
+      if (n.includes('gambe') || n.includes('leg')) return 'bg-amber-500';
+      return 'bg-purple-500';
+    }
+
+    function renderCalendarView() {
+      const container = document.getElementById('calendarGridContainer');
+      const title = document.getElementById('calendarPeriodTitle');
+      const todayStr = getTodayStr();
+
+      // Build map of date -> workouts
+      const byDate = {};
+      appState.historyWorkouts.forEach(w => {
+        if (!byDate[w.date]) byDate[w.date] = [];
+        byDate[w.date].push(w);
+      });
+
+      const baseDate = new Date();
+      if (appState.calendarView === 'week') {
+        const currentDay = (baseDate.getDay() + 6) % 7; // Monday = 0
+        const monday = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate() - currentDay + (appState.calendarOffset * 7));
+        const sunday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 6);
+        title.innerText = `${monday.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })} — ${sunday.toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+
+        const dayLabels = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
+        let html = '<div class="grid grid-cols-7 gap-1.5 text-center">';
+        for (let i = 0; i < 7; i++) {
+          const d = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i);
+          const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+          const workouts = byDate[iso] || [];
+          const isSelected = appState.selectedDateStr === iso;
+          const isToday = iso === todayStr;
+          const dots = workouts.slice(0, 3).map(w => `<span class="w-1.5 h-1.5 rounded-full ${getRoutineDotColor(w.routineName)} inline-block"></span>`).join('');
+          html += `
+            <button onclick="selectCalendarDate('${iso}')" class="p-2 rounded-xl border transition-all flex flex-col items-center justify-between min-h-[64px] ${isSelected ? 'bg-blue-600/20 border-blue-500' : 'bg-slate-950 border-slate-800 hover:border-slate-700'}">
+              <span class="text-[10px] font-bold ${isToday ? 'text-blue-400' : 'text-slate-400'}">${dayLabels[i]}</span>
+              <span class="text-xs font-black ${isToday ? 'text-blue-400 underline' : 'text-white'}">${d.getDate()}</span>
+              <div class="flex gap-0.5 h-2 items-center">${dots || '<span class="w-1 h-1 rounded-full bg-slate-800"></span>'}</div>
+            </button>`;
+        }
+        html += '</div>';
+        container.innerHTML = html;
+      } else if (appState.calendarView === 'month') {
+        const targetMonthDate = new Date(baseDate.getFullYear(), baseDate.getMonth() + appState.calendarOffset, 1);
+        const year = targetMonthDate.getFullYear();
+        const month = targetMonthDate.getMonth();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const startOffset = (targetMonthDate.getDay() + 6) % 7;
+
+        title.innerText = targetMonthDate.toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
+        const headers = ['L', 'M', 'M', 'G', 'V', 'S', 'D'];
+        let html = `<div class="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-slate-500 mb-1.5">${headers.map(h => `<span>${h}</span>`).join('')}</div><div class="grid grid-cols-7 gap-1 text-center">`;
+
+        for (let e = 0; e < startOffset; e++) html += '<div class="h-10"></div>';
+        for (let day = 1; day <= daysInMonth; day++) {
+          const iso = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+          const workouts = byDate[iso] || [];
+          const isSelected = appState.selectedDateStr === iso;
+          const isToday = iso === todayStr;
+          const dots = workouts.slice(0, 3).map(w => `<span class="w-1.5 h-1.5 rounded-full ${getRoutineDotColor(w.routineName)} inline-block"></span>`).join('');
+          html += `
+            <button onclick="selectCalendarDate('${iso}')" class="h-10 rounded-xl border flex flex-col items-center justify-center gap-0.5 transition-all ${isSelected ? 'bg-blue-600/20 border-blue-500' : workouts.length ? 'bg-slate-900 border-slate-700' : 'bg-slate-950/60 border-slate-800/70'}">
+              <span class="text-[11px] font-bold ${isToday ? 'text-blue-400 underline' : 'text-slate-200'}">${day}</span>
+              <div class="flex gap-0.5 h-1.5 items-center">${dots}</div>
+            </button>`;
+        }
+        html += '</div>';
+        container.innerHTML = html;
+      } else {
+        const year = baseDate.getFullYear() + appState.calendarOffset;
+        title.innerText = `Anno ${year}`;
+        let html = '<div class="grid grid-cols-3 gap-2">';
+        for (let m = 0; m < 12; m++) {
+          const mDate = new Date(year, m, 1);
+          const monthPrefix = `${year}-${String(m + 1).padStart(2, '0')}`;
+          const count = appState.historyWorkouts.filter(w => (w.date || '').startsWith(monthPrefix)).length;
+          const monthName = mDate.toLocaleDateString('it-IT', { month: 'short' });
+          html += `
+            <button onclick="openMonthFromYear(${year}, ${m})" class="p-2.5 rounded-xl bg-slate-950 border ${count > 0 ? 'border-blue-500/40' : 'border-slate-800'} text-left space-y-1 hover:border-slate-600">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-white capitalize">${monthName}</span>
+                <span class="text-[10px] font-bold px-1.5 py-0.5 rounded ${count > 0 ? 'bg-blue-500/20 text-blue-400' : 'bg-slate-900 text-slate-500'}">${count}</span>
+              </div>
+              <p class="text-[10px] text-slate-500">${count === 1 ? '1 sessione' : `${count} sessioni`}</p>
+            </button>`;
+        }
+        html += '</div>';
+        container.innerHTML = html;
+      }
+
+      renderHistoryCardsForSelectedDate();
+    }
+
+    function openMonthFromYear(year, monthIndex) {
+      const now = new Date();
+      appState.calendarView = 'month';
+      appState.calendarOffset = (year - now.getFullYear()) * 12 + (monthIndex - now.getMonth());
+      ['week', 'month', 'year'].forEach(v => {
+        const btn = document.getElementById(`cal-view-${v}`);
+        if (!btn) return;
+        btn.className = v === 'month'
+          ? 'px-3 py-1.5 rounded-xl text-xs font-bold bg-blue-600 text-white'
+          : 'px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-400';
+      });
+      renderCalendarView();
+    }
+
+    function renderHistoryCardsForSelectedDate() {
+      const container = document.getElementById('historyCardsContainer');
+      const titleEl = document.getElementById('selectedDateHistoryTitle');
+      const countEl = document.getElementById('selectedDateHistoryCount');
+
+      const filtered = appState.selectedDateStr
+        ? appState.historyWorkouts.filter(w => w.date === appState.selectedDateStr)
+        : appState.historyWorkouts;
+
+      titleEl.innerText = appState.selectedDateStr
+        ? `Sessioni del ${appState.selectedDateStr}`
+        : 'Tutte le Sessioni';
+      countEl.innerText = `${filtered.length} ${filtered.length === 1 ? 'Allenamento' : 'Allenamenti'}`;
+
+      if (filtered.length === 0) {
+        container.innerHTML = '<p class="text-xs text-slate-500 italic text-center py-4">Nessun allenamento registrato per questa data.</p>';
+        return;
+      }
+
+      container.innerHTML = filtered.map(w => `
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3 shadow-sm">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+            <div>
+              <div class="flex items-center space-x-2">
+                <h4 class="text-xs font-bold text-white">${w.routineName}</h4>
+                ${w.isPR ? '<span class="text-[10px] font-black text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">🏆 RECORD PR</span>' : ''}
+              </div>
+              <p class="text-[10px] text-slate-400">${w.date}${w.note ? ` · ${w.note}` : ''}</p>
+            </div>
+            <div class="flex items-center space-x-2">
+              <button onclick="openEditHistoryModal('${w.id}')" class="text-blue-400 hover:text-blue-300 text-xs font-semibold">Modifica</button>
+              <button onclick="deleteHistoryWorkout('${w.id}')" class="text-slate-500 hover:text-red-400 text-xs font-medium">Elimina</button>
+            </div>
+          </div>
+
+          <div class="space-y-1">
+            ${w.exercises.map(e => {
+              const exDef = appState.exercises.find(x => x.id === e.exerciseId);
+              const exName = exDef ? exDef.name : e.exerciseId;
+              const maxLoad = Math.max(0, ...e.sets.map(s => s.load || 0));
+              return `
+                <div class="text-xs text-slate-300 flex justify-between">
+                  <span>${exName} (${e.sets.length} serie)</span>
+                  <span class="font-mono text-blue-400 font-bold">${maxLoad} kg</span>
+                </div>`;
+            }).join('')}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function openEditHistoryModal(workoutId) {
+      const workout = appState.historyWorkouts.find(w => w.id === workoutId);
+      if (!workout) return;
+      appState.editingHistoryId = workoutId;
+      const content = document.getElementById('editHistoryContent');
+      content.innerHTML = `
+        <div class="space-y-2.5 text-xs">
+          <div>
+            <label class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Nome Scheda</label>
+            <input type="text" id="editHistRoutineName" value="${workout.routineName}" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white font-bold">
+          </div>
+          <div>
+            <label class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Data</label>
+            <input type="date" id="editHistDate" value="${workout.date}" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white font-bold">
+          </div>
+          <div>
+            <label class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Note</label>
+            <textarea id="editHistNote" rows="2" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white resize-none">${workout.note || ''}</textarea>
+          </div>
+        </div>
+      `;
+      document.getElementById('editHistoryModal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function saveHistoryEdits() {
+      const workout = appState.historyWorkouts.find(w => w.id === appState.editingHistoryId);
+      if (!workout) return;
+      workout.routineName = document.getElementById('editHistRoutineName').value.trim() || workout.routineName;
+      workout.date = document.getElementById('editHistDate').value || workout.date;
+      workout.note = document.getElementById('editHistNote').value || '';
+      saveStateToLocalStorage();
+      closeModal('editHistoryModal');
+      renderCalendarView();
+      showToast('Modifiche alla sessione salvate!');
+    }
+
+    function deleteHistoryWorkout(id) {
+      appState.historyWorkouts = appState.historyWorkouts.filter(w => w.id !== id);
+      saveStateToLocalStorage();
+      renderCalendarView();
+      showToast('Sessione eliminata');
+    }
+
+    /* ==================== 9. PROGRESS & CHARTS ==================== */
+    let strengthChartInstance = null;
+    let weightChartInstance = null;
+
+    function setStrengthChartMode(mode) {
+      appState.strengthChartMode = mode;
+      const map = { all: 'chart-mode-all', avg_max: 'chart-mode-avg', volume: 'chart-mode-vol' };
+      Object.entries(map).forEach(([m, id]) => {
+        const btn = document.getElementById(id);
+        if (!btn) return;
+        btn.className = m === mode
+          ? 'flex-1 py-1 rounded-lg text-[10px] font-bold bg-blue-600 text-white'
+          : 'flex-1 py-1 rounded-lg text-[10px] font-semibold text-slate-400';
+      });
+      renderStrengthChart();
+    }
+
+    function renderProgressView() {
+      // 1. Populate Exercise Select
+      const select = document.getElementById('chartExerciseSelect');
+      select.innerHTML = appState.exercises.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
+
+      renderStrengthChart();
+      renderPRBoard();
+      renderMuscleVolumeTracker();
+      renderWeightChart();
+    }
+
+    function renderStrengthChart() {
+      const exId = document.getElementById('chartExerciseSelect').value || 'ex_panca';
+      const ctx = document.getElementById('strengthChartCanvas').getContext('2d');
+
+      if (strengthChartInstance) strengthChartInstance.destroy();
+
+      // Extract real history data for the selected exercise (fallback to demo trend if empty)
+      const matching = [...appState.historyWorkouts]
+        .reverse()
+        .map(w => {
+          const ex = w.exercises.find(e => e.exerciseId === exId);
+          if (!ex || !ex.sets.length) return null;
+          const loads = ex.sets.map(s => s.load || 0);
+          const maxWt = Math.max(...loads);
+          const avgWt = +(loads.reduce((a, b) => a + b, 0) / loads.length).toFixed(1);
+          const vol = ex.sets.reduce((acc, s) => acc + (s.load || 0) * (s.repsDone || 0), 0);
+          const best1RM = Math.max(...ex.sets.map(s => Math.round((s.load || 0) * (1 + (s.repsDone || 0) / 30))));
+          return { date: w.date, maxWt, avgWt, vol, best1RM };
+        })
+        .filter(Boolean);
+
+      const labels = matching.length ? matching.map(m => m.date.slice(5)) : ['01 Nov', '08 Nov', '15 Nov', '21 Nov'];
+      const maxSeries = matching.length ? matching.map(m => m.maxWt) : [75, 77.5, 80, 82.5];
+      const avgSeries = matching.length ? matching.map(m => m.avgWt) : [72, 75, 77.5, 80];
+      const volSeries = matching.length ? matching.map(m => m.vol) : [1680, 1800, 1920, 2040];
+
+      let datasets = [];
+      if (appState.strengthChartMode === 'volume') {
+        datasets = [{
+          label: 'Volume Totale (kg)',
+          data: volSeries,
+          borderColor: '#10b981',
+          backgroundColor: 'rgba(16, 185, 129, 0.15)',
+          fill: true,
+          tension: 0.3
+        }];
+      } else if (appState.strengthChartMode === 'avg_max') {
+        datasets = [
+          { label: 'Picco Max (kg)', data: maxSeries, borderColor: '#2563eb', backgroundColor: 'rgba(37, 99, 235, 0.1)', fill: false, tension: 0.3 },
+          { label: 'Media Serie (kg)', data: avgSeries, borderColor: '#10b981', borderDash: [4, 4], fill: false, tension: 0.3 }
+        ];
+      } else {
+        datasets = [{
+          label: 'Carico Max (kg)',
+          data: maxSeries,
+          borderColor: '#2563eb',
+          backgroundColor: 'rgba(37, 99, 235, 0.1)',
+          fill: true,
+          tension: 0.3
+        }];
+      }
+
+      strengthChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: { labels, datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: datasets.length > 1, labels: { color: '#94a3b8', font: { size: 10 } } } },
+          scales: {
+            x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 10 } } },
+            y: { grid: { color: '#1e293b' }, ticks: { color: '#64748b', font: { size: 10 } } }
+          }
+        }
+      });
+
+      const best1RM = matching.length ? Math.max(...matching.map(m => m.best1RM)) : 104;
+      const bestMax = Math.max(...maxSeries);
+      const bestVol = Math.max(...volSeries);
+
+      document.getElementById('kpiEst1RM').innerText = `${best1RM} kg`;
+      document.getElementById('kpiMaxWeight').innerText = `${bestMax} kg`;
+      document.getElementById('kpiBestVolume').innerText = `${bestVol.toLocaleString('it-IT')} kg`;
+    }
+
+    function renderPRBoard() {
+      const container = document.getElementById('prBoardContainer');
+      const prs = [
+        { name: 'Panca Piana Bilanciere', load: '85 kg', reps: '8 reps', date: '21 Nov 2026' },
+        { name: 'Squat Bilanciere', load: '115 kg', reps: '6 reps', date: '19 Nov 2026' },
+        { name: 'Stacco da Terra', load: '140 kg', reps: '5 reps', date: '15 Nov 2026' }
+      ];
+
+      container.innerHTML = prs.map(pr => `
+        <div class="flex items-center justify-between p-2.5 bg-slate-950 border border-slate-800 rounded-xl">
+          <div class="flex items-center space-x-2">
+            <span class="text-amber-400 font-bold text-xs">🏆</span>
+            <div>
+              <p class="text-xs font-bold text-slate-200">${pr.name}</p>
+              <p class="text-[10px] text-slate-400">${pr.date}</p>
+            </div>
+          </div>
+          <div class="text-right">
+            <p class="text-xs font-mono font-black text-amber-400">${pr.load}</p>
+            <p class="text-[10px] text-slate-500 font-medium">${pr.reps}</p>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderMuscleVolumeTracker() {
+      const container = document.getElementById('muscleVolumeContainer');
+      const muscleData = [
+        { group: 'Petto', sets: 14, max: 20, color: 'bg-blue-500' },
+        { group: 'Dorso', sets: 16, max: 20, color: 'bg-emerald-500' },
+        { group: 'Gambe', sets: 12, max: 20, color: 'bg-amber-500' },
+        { group: 'Spalle', sets: 10, max: 20, color: 'bg-purple-500' }
+      ];
+
+      container.innerHTML = muscleData.map(m => `
+        <div>
+          <div class="flex justify-between text-[11px] font-bold mb-1">
+            <span class="text-slate-300">${m.group}</span>
+            <span class="text-slate-400">${m.sets} / ${m.max} serie</span>
+          </div>
+          <div class="w-full bg-slate-950 rounded-full h-2 overflow-hidden border border-slate-800">
+            <div class="${m.color} h-full rounded-full" style="width: ${(m.sets / m.max) * 100}%"></div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderWeightChart() {
+      const ctx = document.getElementById('weightChartCanvas').getContext('2d');
+      if (weightChartInstance) weightChartInstance.destroy();
+
+      weightChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: appState.weightLogs.map(w => w.date),
+          datasets: [{
+            label: 'Peso (kg)',
+            data: appState.weightLogs.map(w => w.weight),
+            borderColor: '#10b981',
+            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+            fill: true,
+            tension: 0.2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 10 } } },
+            y: { grid: { color: '#1e293b' }, ticks: { color: '#64748b', font: { size: 10 } } }
+          }
+        }
+      });
+    }
+
+    /* ==================== 10. PLATE CALCULATOR LOGIC ==================== */
+    function openPlateCalculatorModal() {
+      document.getElementById('plateCalcModal').classList.remove('hidden');
+      calculatePlates();
+    }
+
+    function openPlateCalculatorModalForEx(weight) {
+      document.getElementById('plateCalcTargetKg').value = weight;
+      openPlateCalculatorModal();
+    }
+
+    function calculatePlates() {
+      const barKg = parseFloat(document.getElementById('plateCalcBarType').value) || 20;
+      const targetKg = parseFloat(document.getElementById('plateCalcTargetKg').value) || 20;
+
+      let remainingWeightPerSide = (targetKg - barKg) / 2;
+      const availablePlates = [25, 20, 15, 10, 5, 2.5, 1.25];
+      const selectedPlates = [];
+
+      if (remainingWeightPerSide > 0) {
+        availablePlates.forEach(p => {
+          while (remainingWeightPerSide >= p) {
+            selectedPlates.push(p);
+            remainingWeightPerSide -= p;
+          }
+        });
+      }
+
+      // Render Visual Plates
+      const visualContainer = document.getElementById('plateVisualPerSide');
+      visualContainer.innerHTML = selectedPlates.map(p => `
+        <div class="w-8 h-12 rounded-lg bg-indigo-600 border border-indigo-400 text-white font-black text-[10px] flex items-center justify-center shadow-md">
+          ${p}
+        </div>
+      `).join('');
+
+      document.getElementById('plateSummaryText').innerText = selectedPlates.length > 0 ? selectedPlates.map(p => `${p}kg`).join(' + ') + ' per lato' : 'Solo bilanciere scarico';
+
+      // Render Warmup Ramp Sets (50%, 70%, 85%, 100%)
+      const rampContainer = document.getElementById('warmupRampContainer');
+      const ramp = [
+        { pct: '50%', wt: Math.round(targetKg * 0.5), reps: '8 reps' },
+        { pct: '70%', wt: Math.round(targetKg * 0.7), reps: '5 reps' },
+        { pct: '85%', wt: Math.round(targetKg * 0.85), reps: '3 reps' },
+        { pct: '100%', wt: targetKg, reps: 'Work' }
+      ];
+
+      rampContainer.innerHTML = ramp.map(r => `
+        <div class="bg-slate-900 p-2 rounded-xl border border-slate-800">
+          <span class="text-[9px] text-slate-400 block">${r.pct}</span>
+          <span class="font-bold text-white block">${r.wt} kg</span>
+          <span class="text-[9px] text-indigo-400 font-semibold">${r.reps}</span>
+        </div>
+      `).join('');
+    }
+
+    /* ==================== 11. BARCODE SCANNER LOGIC ==================== */
+    let html5QrCodeScanner = null;
+
+    function openBarcodeScannerModal() {
+      document.getElementById('barcodeModal').classList.remove('hidden');
+      if (!html5QrCodeScanner) {
+        html5QrCodeScanner = new Html5Qrcode("interactiveScanner");
+        html5QrCodeScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 200, height: 150 } }, (decodedText) => {
+          lookupEanCode(decodedText);
+        }, (errorMessage) => {
+          // ignore scan errors
+        }).catch(err => {
+          document.getElementById('interactiveScanner').innerHTML = `<p class="text-xs text-amber-400 p-4 text-center">Fotocamera non disponibile. Usa l'inserimento EAN manuale.</p>`;
+        });
+      }
+    }
+
+    function closeBarcodeScannerModal() {
+      if (html5QrCodeScanner) {
+        html5QrCodeScanner.stop().then(() => {
+          html5QrCodeScanner.clear();
+          html5QrCodeScanner = null;
+        }).catch(() => {});
+      }
+      closeModal('barcodeModal');
+    }
+
+    function lookupEanCode(ean) {
+      if (!ean) return;
+      showToast(`Ricerca EAN ${ean} su OpenFoodFacts...`);
+
+      fetch(`https://world.openfoodfacts.org/api/v2/product/${ean}.json`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.status === 1 && data.product) {
+            const p = data.product;
+            const nut = p.nutriments || {};
+            const scannedFood = {
+              id: 'scan_' + Date.now(),
+              name: p.product_name_it || p.product_name || 'Prodotto Scansionato',
+              calories: Math.round(nut['energy-kcal_100g'] || 0),
+              carbs: Math.round(nut.carbohydrates_100g || 0),
+              protein: Math.round(nut.proteins_100g || 0),
+              fat: Math.round(nut.fat_100g || 0),
+              defaultUnit: 'g'
+            };
+
+            appState.foods.push(scannedFood);
+            saveStateToLocalStorage();
+            closeBarcodeScannerModal();
+            openPortionModal(scannedFood.id, 'pranzo');
+          } else {
+            showToast('Codice EAN non trovato nel database');
+          }
+        })
+        .catch(err => {
+          showToast('Errore di connessione a OpenFoodFacts');
+        });
+    }
+
+    /* ==================== 12. SEARCH & PICKER MODALS ==================== */
+    function openFoodLoggerModal(mealKey = 'pranzo') {
+      activePortionState.targetMeal = mealKey || 'pranzo';
+      document.getElementById('foodSearchInput').value = '';
+      document.getElementById('foodLoggerModal').classList.remove('hidden');
+      handleFoodSearch('');
+    }
+
+    function setFoodSearchFilter(filter) {
+      appState.foodSearchFilter = filter;
+      ['all', 'recent', 'fav'].forEach(f => {
+        const btn = document.getElementById(`food-filter-${f}`);
+        if (!btn) return;
+        btn.className = f === filter
+          ? 'flex-1 py-1 rounded-xl text-[11px] font-bold bg-emerald-600 text-white'
+          : 'flex-1 py-1 rounded-xl text-[11px] font-semibold text-slate-400';
+      });
+      handleFoodSearch(document.getElementById('foodSearchInput').value || '');
+    }
+
+    function toggleFavoriteFood(foodId, event) {
+      if (event) event.stopPropagation();
+      if (appState.favoriteFoods.includes(foodId)) {
+        appState.favoriteFoods = appState.favoriteFoods.filter(id => id !== foodId);
+      } else {
+        appState.favoriteFoods.push(foodId);
+      }
+      saveStateToLocalStorage();
+      handleFoodSearch(document.getElementById('foodSearchInput').value || '');
+    }
+
+    function handleFoodSearch(query) {
+      const container = document.getElementById('foodSearchResultsContainer');
+      const q = (query || '').toLowerCase();
+      let filtered = appState.foods.filter(f => f.name.toLowerCase().includes(q));
+      if (appState.foodSearchFilter === 'fav') {
+        filtered = filtered.filter(f => appState.favoriteFoods.includes(f.id));
+      } else if (appState.foodSearchFilter === 'recent') {
+        filtered = filtered.filter(f => appState.recentFoods.includes(f.id));
+      }
+
+      if (filtered.length === 0) {
+        container.innerHTML = '<p class="text-xs text-slate-500 italic text-center py-6">Nessun alimento trovato.</p>';
+        return;
+      }
+
+      container.innerHTML = filtered.map(f => {
+        const isFav = appState.favoriteFoods.includes(f.id);
+        return `
+          <div onclick="openPortionModal('${f.id}', '${activePortionState.targetMeal}')" class="flex items-center justify-between p-3 bg-slate-950 border border-slate-800/80 hover:border-emerald-500/50 rounded-2xl cursor-pointer transition-all">
+            <div class="flex items-center space-x-2.5 min-w-0">
+              <button onclick="toggleFavoriteFood('${f.id}', event)" class="text-sm ${isFav ? 'text-amber-400' : 'text-slate-600 hover:text-slate-400'}" title="Preferito">★</button>
+              <div class="min-w-0">
+                <h4 class="text-xs font-bold text-white truncate">${f.name}</h4>
+                <p class="text-[10px] text-slate-400">100g = ${f.calories} kcal · C:${f.carbs}g P:${f.protein}g G:${f.fat}g</p>
+              </div>
+            </div>
+            <span class="text-xs font-bold text-emerald-400 px-2 py-1 bg-emerald-500/10 rounded-xl border border-emerald-500/20 shrink-0">+ Seleziona</span>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function openExercisePickerModal() {
+      document.getElementById('exercisePickerModal').classList.remove('hidden');
+      filterExercisePicker('');
+    }
+
+    function filterExercisePicker(q) {
+      const container = document.getElementById('exercisePickerList');
+      const filtered = appState.exercises.filter(e => e.name.toLowerCase().includes(q.toLowerCase()));
+
+      container.innerHTML = filtered.map(e => `
+        <div onclick="addExerciseToActiveWorkout('${e.id}')" class="flex items-center justify-between p-3 bg-slate-950 border border-slate-800 hover:border-blue-500/50 rounded-2xl cursor-pointer">
+          <div>
+            <h4 class="text-xs font-bold text-white">${e.name}</h4>
+            <span class="text-[10px] text-slate-400 font-semibold">${e.category}</span>
+          </div>
+          <i data-lucide="plus-circle" class="w-4 h-4 text-blue-400"></i>
+        </div>
+      `).join('');
+      lucide.createIcons();
+    }
+
+    function addExerciseToActiveWorkout(exerciseId) {
+      if (!appState.activeWorkout) {
+        appState.activeWorkout = { routineId: 'custom', routineName: 'Workout Personalizzato', exercises: [] };
+      }
+      appState.activeWorkout.exercises.push({
+        exerciseId: exerciseId,
+        sets: [{ targetReps: 10, repsDone: 10, load: 40, isSuperset: false }]
+      });
+      saveStateToLocalStorage();
+      closeModal('exercisePickerModal');
+      renderActiveWorkoutView();
+      renderHeaderActions();
+    }
+
+    /* ==================== 13. MODAL HELPERS & EXPORT / IMPORT ==================== */
+    function closeModal(id) {
+      document.getElementById(id).classList.add('hidden');
+    }
+
+    function openCustomConfirm(title, message, onConfirm) {
+      document.getElementById('customConfirmTitle').innerText = title;
+      document.getElementById('customConfirmMessage').innerText = message;
+      const btn = document.getElementById('customConfirmActionBtn');
+      btn.onclick = () => {
+        closeModal('customConfirmModal');
+        if (onConfirm) onConfirm();
+      };
+      document.getElementById('customConfirmModal').classList.remove('hidden');
+    }
+
+    function openRoutineManager() {
+      const list = document.getElementById('routineManagerList');
+      list.innerHTML = appState.routines.map(r => `
+        <div class="flex items-center justify-between p-3 bg-slate-950 border border-slate-800 rounded-xl">
+          <div class="flex items-center space-x-2 min-w-0">
+            <span class="w-2.5 h-2.5 rounded-full ${r.color} shrink-0"></span>
+            <div class="min-w-0">
+              <p class="text-xs font-bold text-white truncate">${r.name}</p>
+              <p class="text-[10px] text-slate-400">${r.exercises.length} esercizi</p>
+            </div>
+          </div>
+          <div class="flex items-center space-x-1.5 shrink-0">
+            <button onclick="loadRoutineIntoActive('${r.id}'); closeModal('routineManagerModal')" class="px-2 py-1 bg-blue-600/20 text-blue-400 rounded-lg text-[10px] font-bold">Carica</button>
+            <button onclick="deleteRoutine('${r.id}')" class="p-1 text-slate-500 hover:text-red-400"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+          </div>
+        </div>
+      `).join('');
+      document.getElementById('routineManagerModal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function deleteRoutine(routineId) {
+      if (appState.routines.length <= 1) {
+        showToast('Deve rimanere almeno una scheda');
+        return;
+      }
+      appState.routines = appState.routines.filter(r => r.id !== routineId);
+      saveStateToLocalStorage();
+      openRoutineManager();
+      renderActiveWorkoutView();
+      showToast('Scheda eliminata');
+    }
+
+    function saveCurrentAsNewRoutine() {
+      if (!appState.activeWorkout || appState.activeWorkout.exercises.length === 0) {
+        showToast('Aggiungi almeno un esercizio prima di salvare la routine');
+        return;
+      }
+      document.getElementById('newRoutineNameInput').value = `Scheda ${appState.routines.length + 1}`;
+      document.getElementById('saveRoutineModal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function confirmSaveNewRoutine() {
+      const name = document.getElementById('newRoutineNameInput').value.trim();
+      if (!name) {
+        showToast('Inserisci un nome per la scheda');
+        return;
+      }
+      const colors = ['bg-blue-500', 'bg-emerald-500', 'bg-amber-500', 'bg-purple-500'];
+      const newRoutine = {
+        id: 'routine_' + Date.now(),
+        name,
+        color: colors[appState.routines.length % colors.length],
+        exercises: JSON.parse(JSON.stringify(appState.activeWorkout.exercises))
+      };
+      appState.routines.push(newRoutine);
+      appState.activeWorkout.routineId = newRoutine.id;
+      appState.activeWorkout.routineName = newRoutine.name;
+      saveStateToLocalStorage();
+      closeModal('saveRoutineModal');
+      renderActiveWorkoutView();
+      showToast(`Nuova scheda "${name}" salvata!`);
+    }
+
+    function openExerciseLibraryModal() {
+      document.getElementById('newCustomExName').value = '';
+      document.getElementById('exerciseLibraryModal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function addNewCustomExercise() {
+      const name = document.getElementById('newCustomExName').value.trim();
+      const category = document.getElementById('newCustomExCat').value;
+      if (!name) {
+        showToast('Inserisci il nome dell\'esercizio');
+        return;
+      }
+      appState.exercises.unshift({
+        id: 'ex_' + Date.now(),
+        name,
+        category,
+        isBodyweight: false
+      });
+      saveStateToLocalStorage();
+      closeModal('exerciseLibraryModal');
+      showToast(`Esercizio "${name}" aggiunto alla libreria!`);
+    }
+
+    function openBodyProfileModal() {
+      document.getElementById('profileWeightInput').value = appState.profile.weight;
+      document.getElementById('profileHeightInput').value = appState.profile.height;
+      document.getElementById('profileAgeInput').value = appState.profile.age;
+      document.getElementById('profileGenderInput').value = appState.profile.gender;
+      document.getElementById('profileGoalInput').value = appState.profile.goal;
+      document.getElementById('bodyProfileModal').classList.remove('hidden');
+    }
+
+    function saveBodyProfile() {
+      appState.profile.weight = parseFloat(document.getElementById('profileWeightInput').value) || 78.5;
+      appState.profile.height = parseInt(document.getElementById('profileHeightInput').value) || 178;
+      appState.profile.age = parseInt(document.getElementById('profileAgeInput').value) || 25;
+      appState.profile.gender = document.getElementById('profileGenderInput').value;
+      appState.profile.goal = document.getElementById('profileGoalInput').value;
+
+      // Update weight history for today
+      const today = getTodayStr();
+      const idx = appState.weightLogs.findIndex(w => w.date === today);
+      if (idx !== -1) appState.weightLogs[idx].weight = appState.profile.weight;
+      else appState.weightLogs.push({ date: today, weight: appState.profile.weight });
+
+      saveStateToLocalStorage();
+      closeModal('bodyProfileModal');
+      renderNutritionDiaryView();
+      renderHeaderActions();
+      if (appState.activeTab === 'progressi') renderWeightChart();
+      showToast('Profilo e obiettivi aggiornati!');
+    }
+
+    function exportCSV() {
+      if (appState.historyWorkouts.length === 0) {
+        showToast('Nessuna sessione da esportare in CSV');
+        return;
+      }
+      let csv = 'Data,Scheda,Esercizio,Serie,Carico_kg,Reps_Target,Reps_Fatte\n';
+      appState.historyWorkouts.forEach(w => {
+        w.exercises.forEach(ex => {
+          const exDef = appState.exercises.find(e => e.id === ex.exerciseId);
+          const exName = (exDef ? exDef.name : ex.exerciseId).replace(/"/g, '""');
+          ex.sets.forEach((s, idx) => {
+            csv += `"${w.date}","${(w.routineName || '').replace(/"/g, '""')}","${exName}",${idx + 1},${s.load || 0},${s.targetReps || 0},${s.repsDone || 0}\n`;
+          });
+        });
+      });
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `IronOS_Workouts_${getTodayStr()}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      showToast('CSV degli allenamenti esportato!');
+    }
+
+    function exportJSONBackup() {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appState, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", `IronOS_Backup_${getTodayStr()}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+      showToast('Backup JSON completo scaricato!');
+    }
+
+    function importJSONBackup(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const imported = JSON.parse(e.target.result);
+          appState = { ...appState, ...imported };
+          saveStateToLocalStorage();
+          location.reload();
+        } catch (err) {
+          showToast('File JSON non valido');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function confirmFactoryReset() {
+      openCustomConfirm(
+        'Reset di Fabbrica',
+        'Sei sicuro di voler cancellare tutti i dati di allenamento e nutrizione?',
+        () => {
+          localStorage.clear();
+          location.reload();
+        }
+      );
+    }
+  </script>
+</body>
+</html>
